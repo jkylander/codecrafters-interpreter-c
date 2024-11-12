@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
+
+bool hadError;
 
 enum TokenList {
     LEFT_PAREN, RIGHT_PAREN,
@@ -25,6 +28,7 @@ enum TokenList {
 typedef struct {
     char *contents;
     size_t length;
+    size_t lines;
 } FileData;
 
 typedef struct {
@@ -61,6 +65,7 @@ enum TokenList type_from_str(char *str) {
             return known_methods[i].type;
         }
     }
+    hadError = true;
     return -1;
 }
 
@@ -72,6 +77,7 @@ FileData *read_file_contents(const char *filename);
 
 Token *scan_tokens(FileData *data, size_t *num_tokens) {
     Token *tokens = malloc((data->length + 1) * sizeof(Token));
+    data->lines++;
 
     for (int i = 0; i < data->length; i++) {
         Token *token = &tokens[*num_tokens];
@@ -103,7 +109,6 @@ Token *scan_tokens(FileData *data, size_t *num_tokens) {
                 token->lexeme = ",";
             } break;
 
-
             case '.': {
                 token->type = DOT;
                 token->lexeme = ".";
@@ -130,10 +135,13 @@ Token *scan_tokens(FileData *data, size_t *num_tokens) {
             } break;
 
             default: {
-                fprintf(stderr, "Unknown lexeme encountered: %c\n", data->contents[i]);
+                fprintf(stderr, "[line %zu] Error: Unexpected character: %c\n", data->lines, data->contents[i]);
+                hadError = true;
+                (*num_tokens)--;
             }
         }
     }
+
     Token *token = &tokens[*num_tokens];
     token->type = EOF_TOKEN;
     token->lexeme = "";
@@ -172,6 +180,7 @@ int main(int argc, char *argv[]) {
         size_t num_tokens = 0;
         Token *tokens = scan_tokens(file_data, &num_tokens);
         print_tokens(tokens, num_tokens);
+        if (hadError) return 65;
 
         free(tokens);
         free(file_data->contents);
@@ -214,6 +223,7 @@ FileData *read_file_contents(const char *filename) {
     FileData *file_data = malloc(sizeof(FileData));
     file_data->contents = file_contents;
     file_data->length = file_size;
+    file_data->lines = 0;
     fclose(file);
 
     return file_data;
