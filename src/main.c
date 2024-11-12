@@ -12,7 +12,7 @@ enum TokenList {
     EQUAL, EQUAL_EQUAL,
     LESS, LESS_EQUAL,
 
-    IDENTIFER, STRING, NUMBER,
+    IDENTIFIER, STRING, NUMBER,
 
     AND, CLASS, ELSE, FALSE, FUN,
     FOR, IF, NIL, OR, PRINT, RETURN,
@@ -45,17 +45,18 @@ struct method_string_pair {
     {EQUAL, "EQUAL"}, {EQUAL_EQUAL, "EQUAL_EQUAL"},
     {LESS, "LESS"}, {LESS_EQUAL, "LESS_EQUAL"},
 
-    {IDENTIFER, "IDENTIFIER"}, {STRING, "STRING"}, {NUMBER, "NUMBER"},
+    {IDENTIFIER, "IDENTIFIER"}, {STRING, "STRING"}, {NUMBER, "NUMBER"},
 
     {AND, "AND"}, {CLASS, "CLASS"}, {ELSE, "ELSE"}, {FALSE, "FALSE"}, {FUN, "FUN"},
     {FOR, "FOR"}, {IF, "IF"}, {NIL, "NIL"}, {OR, "OR"}, {PRINT, "PRINT"}, {RETURN, "RETURN"},
     {SUPER, "SUPER"}, {THIS, "THIS"}, {TRUE, "TRUE"}, {VAR, "VAR"}, {WHILE, "WHILE"},
 
-    {EOF_TOKEN,    "EOF"},
+    {EOF_TOKEN, "EOF"},
 };
 
 enum TokenList type_from_str(char *str) {
-    for (int i = 0; i < sizeof(known_methods); ++i) {
+    int n = sizeof(known_methods) / sizeof(known_methods[0]);
+    for (int i = 0; i < n; ++i) {
         if (strcmp(str, known_methods[i].str) == 0) {
             return known_methods[i].type;
         }
@@ -70,7 +71,7 @@ char *str_from_type(enum TokenList type) {
 FileData *read_file_contents(const char *filename);
 
 Token *scan_tokens(FileData *data, size_t *num_tokens) {
-    Token *tokens = malloc(data->length * sizeof(Token));
+    Token *tokens = malloc((data->length + 1) * sizeof(Token));
 
     for (int i = 0; i < data->length; i++) {
         Token *token = &tokens[*num_tokens];
@@ -87,14 +88,16 @@ Token *scan_tokens(FileData *data, size_t *num_tokens) {
                 token->lexeme = ")";
             } break;
 
-            case '\0': return tokens;
             default: {
-            fprintf(stderr, "Unknown lexeme encountered: %c\n", data->contents[i]);
+                fprintf(stderr, "Unknown lexeme encountered: %c\n", data->contents[i]);
             }
         }
     }
-    if (num_tokens > 0) return tokens;
-    return NULL;
+    Token *token = &tokens[*num_tokens];
+    token->type = EOF_TOKEN;
+    token->lexeme = "";
+    (*num_tokens)++;
+    return tokens;
 }
 
 void print_token(Token token) {
@@ -105,9 +108,7 @@ void print_tokens(Token *tokens, size_t num) {
     for (int i = 0; i < num; i++) {
         print_token(tokens[i]);
     }
-
 }
-
 
 int main(int argc, char *argv[]) {
     // Disable output buffering
@@ -127,18 +128,12 @@ int main(int argc, char *argv[]) {
 
         FileData *file_data = read_file_contents(argv[2]);
 
-        // Uncomment this block to pass the first stage
-        if (strlen(file_data->contents) > 0) {
-            size_t num_tokens = 0;
-            Token *tokens = scan_tokens(file_data, &num_tokens);
-            if (tokens == NULL) {
-                fprintf(stderr, "No tokens.\n");
-                exit(1);
-            }
-            print_tokens(tokens, num_tokens);
-        }
+        size_t num_tokens = 0;
+        Token *tokens = scan_tokens(file_data, &num_tokens);
+        print_tokens(tokens, num_tokens);
 
-        printf("EOF  null\n");
+        free(tokens);
+        free(file_data->contents);
         free(file_data);
     } else {
         fprintf(stderr, "Unknown command: %s\n", command);
