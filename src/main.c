@@ -73,7 +73,7 @@ FileData *read_file_contents(const char *filename);
 Token *scan_tokens(FileData *data, size_t *num_tokens) {
     Token *tokens = malloc((data->length) * sizeof(Token));
 
-    for (int i = 0; i < data->length - 1; i++) {
+    for (int i = 0; i < strlen(data->contents + 1); i++) {
         Token *token = &tokens[*num_tokens];
         (*num_tokens)++;
 
