@@ -98,6 +98,37 @@ Token *scan_tokens(FileData *data, size_t *num_tokens) {
                 token->lexeme = "}";
             } break;
 
+            case ',': {
+                token->type = COMMA;
+                token->lexeme = ",";
+            } break;
+
+
+            case '.': {
+                token->type = DOT;
+                token->lexeme = ".";
+            } break;
+
+            case '-': {
+                token->type = MINUS;
+                token->lexeme = "-";
+            } break;
+
+            case '+': {
+                token->type = PLUS;
+                token->lexeme = "+";
+            } break;
+
+            case ';': {
+                token->type = SEMICOLON;
+                token->lexeme = ";";
+            } break;
+
+            case '*': {
+                token->type = STAR;
+                token->lexeme = "*";
+            } break;
+
             default: {
                 fprintf(stderr, "Unknown lexeme encountered: %c\n", data->contents[i]);
             }
