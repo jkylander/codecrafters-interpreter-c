@@ -71,9 +71,9 @@ char *str_from_type(enum TokenList type) {
 FileData *read_file_contents(const char *filename);
 
 Token *scan_tokens(FileData *data, size_t *num_tokens) {
-    Token *tokens = malloc((data->length + 1) * sizeof(Token));
+    Token *tokens = malloc((data->length) * sizeof(Token));
 
-    for (int i = 0; i < data->length; i++) {
+    for (int i = 0; i < data->length - 1; i++) {
         Token *token = &tokens[*num_tokens];
         (*num_tokens)++;
 
@@ -172,7 +172,7 @@ FileData *read_file_contents(const char *filename) {
     file_contents[file_size] = '\0';
     FileData *file_data = malloc(sizeof(FileData));
     file_data->contents = file_contents;
-    file_data->length = file_size - 1;
+    file_data->length = file_size;
     fclose(file);
 
     return file_data;
