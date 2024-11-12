@@ -88,6 +88,16 @@ Token *scan_tokens(FileData *data, size_t *num_tokens) {
                 token->lexeme = ")";
             } break;
 
+            case '{': {
+                token->type = LEFT_BRACE;
+                token->lexeme = "{";
+            } break;
+
+            case '}': {
+                token->type = RIGHT_BRACE;
+                token->lexeme = "}";
+            } break;
+
             default: {
                 fprintf(stderr, "Unknown lexeme encountered: %c\n", data->contents[i]);
             }
