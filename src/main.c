@@ -2,7 +2,112 @@
 #include <stdlib.h>
 #include <string.h>
 
-char *read_file_contents(const char *filename);
+enum TokenList {
+    LEFT_PAREN, RIGHT_PAREN,
+    LEFT_BRACE, RIGHT_BRACE,
+    COMMA, DOT, MINUS, PLUS,
+    SEMICOLON, SLASH, STAR,
+
+    BANG, BANG_EQUAL,
+    EQUAL, EQUAL_EQUAL,
+    LESS, LESS_EQUAL,
+
+    IDENTIFER, STRING, NUMBER,
+
+    AND, CLASS, ELSE, FALSE, FUN,
+    FOR, IF, NIL, OR, PRINT, RETURN,
+    SUPER, THIS, TRUE, VAR, WHILE,
+    EOF_TOKEN,
+
+    TOKEN_COUNT,
+};
+
+typedef struct {
+    char *contents;
+    size_t length;
+} FileData;
+
+typedef struct {
+    int type;
+    char *lexeme;
+} Token;
+
+struct method_string_pair {
+    enum TokenList type;
+    char *str;
+} known_methods[] = {
+    {LEFT_PAREN, "LEFT_PAREN"}, {RIGHT_PAREN, "RIGHT_PAREN"  },
+    {LEFT_BRACE, "LEFT_BRACE"}, {RIGHT_BRACE, "RIGHT_BRACE" },
+    {COMMA, "COMMA"}, {DOT, "DOT"}, {MINUS, "MINUS"}, {PLUS, "PLUS"},
+    {SEMICOLON, "SEMICOLON"}, {SLASH, "SLASH"}, {STAR, "STAR"},
+
+    {BANG, "BANG"}, {BANG_EQUAL, "BANG_EQUAL"},
+    {EQUAL, "EQUAL"}, {EQUAL_EQUAL, "EQUAL_EQUAL"},
+    {LESS, "LESS"}, {LESS_EQUAL, "LESS_EQUAL"},
+
+    {IDENTIFER, "IDENTIFIER"}, {STRING, "STRING"}, {NUMBER, "NUMBER"},
+
+    {AND, "AND"}, {CLASS, "CLASS"}, {ELSE, "ELSE"}, {FALSE, "FALSE"}, {FUN, "FUN"},
+    {FOR, "FOR"}, {IF, "IF"}, {NIL, "NIL"}, {OR, "OR"}, {PRINT, "PRINT"}, {RETURN, "RETURN"},
+    {SUPER, "SUPER"}, {THIS, "THIS"}, {TRUE, "TRUE"}, {VAR, "VAR"}, {WHILE, "WHILE"},
+
+    {EOF_TOKEN,    "EOF"},
+};
+
+enum TokenList type_from_str(char *str) {
+    for (int i = 0; i < sizeof(known_methods); ++i) {
+        if (strcmp(str, known_methods[i].str) == 0) {
+            return known_methods[i].type;
+        }
+    }
+    return -1;
+}
+
+char *str_from_type(enum TokenList type) {
+    return known_methods[type].str;
+}
+
+FileData *read_file_contents(const char *filename);
+
+Token *scan_tokens(FileData *data, size_t *num_tokens) {
+    Token *tokens = malloc(data->length * sizeof(Token));
+
+    for (int i = 0; i < data->length; i++) {
+        Token *token = &tokens[*num_tokens];
+        (*num_tokens)++;
+
+        switch (data->contents[i]) {
+            case '(': {
+                token->type = LEFT_PAREN;
+                token->lexeme = "(";
+            } break;
+
+            case ')': {
+                token->type = RIGHT_PAREN;
+                token->lexeme = ")";
+            } break;
+
+            case '\0': return tokens;
+            default: {
+            fprintf(stderr, "Unknown lexeme encountered: %c\n", data->contents[i]);
+            }
+        }
+    }
+    if (num_tokens > 0) return tokens;
+    return NULL;
+}
+
+void print_token(Token token) {
+    printf("%s %s null\n", str_from_type(token.type), token.lexeme);
+}
+
+void print_tokens(Token *tokens, size_t num) {
+    for (int i = 0; i < num; i++) {
+        print_token(tokens[i]);
+    }
+
+}
+
 
 int main(int argc, char *argv[]) {
     // Disable output buffering
@@ -20,16 +125,21 @@ int main(int argc, char *argv[]) {
         // You can use print statements as follows for debugging, they'll be visible when running tests.
         fprintf(stderr, "Logs from your program will appear here!\n");
 
-        char *file_contents = read_file_contents(argv[2]);
+        FileData *file_data = read_file_contents(argv[2]);
 
         // Uncomment this block to pass the first stage
-        if (strlen(file_contents) > 0) {
-            fprintf(stderr, "Scanner not implemented\n");
-            exit(1);
+        if (strlen(file_data->contents) > 0) {
+            size_t num_tokens = 0;
+            Token *tokens = scan_tokens(file_data, &num_tokens);
+            if (tokens == NULL) {
+                fprintf(stderr, "No tokens.\n");
+                exit(1);
+            }
+            print_tokens(tokens, num_tokens);
         }
-        printf("EOF  null\n"); // Placeholder, remove this line when implementing the scanner
 
-        free(file_contents);
+        printf("EOF  null\n");
+        free(file_data);
     } else {
         fprintf(stderr, "Unknown command: %s\n", command);
         return 1;
@@ -38,7 +148,7 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-char *read_file_contents(const char *filename) {
+FileData *read_file_contents(const char *filename) {
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
         fprintf(stderr, "Error reading file: %s\n", filename);
@@ -65,7 +175,10 @@ char *read_file_contents(const char *filename) {
     }
 
     file_contents[file_size] = '\0';
+    FileData *file_data = malloc(sizeof(FileData));
+    file_data->contents = file_contents;
+    file_data->length = file_size - 1;
     fclose(file);
 
-    return file_contents;
+    return file_data;
 }
