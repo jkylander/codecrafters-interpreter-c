@@ -36,8 +36,8 @@ struct method_string_pair {
     enum TokenList type;
     char *str;
 } known_methods[] = {
-    {LEFT_PAREN, "LEFT_PAREN"}, {RIGHT_PAREN, "RIGHT_PAREN"  },
-    {LEFT_BRACE, "LEFT_BRACE"}, {RIGHT_BRACE, "RIGHT_BRACE" },
+    {LEFT_PAREN, "LEFT_PAREN"}, {RIGHT_PAREN, "RIGHT_PAREN"},
+    {LEFT_BRACE, "LEFT_BRACE"}, {RIGHT_BRACE, "RIGHT_BRACE"},
     {COMMA, "COMMA"}, {DOT, "DOT"}, {MINUS, "MINUS"}, {PLUS, "PLUS"},
     {SEMICOLON, "SEMICOLON"}, {SLASH, "SLASH"}, {STAR, "STAR"},
 
@@ -71,9 +71,9 @@ char *str_from_type(enum TokenList type) {
 FileData *read_file_contents(const char *filename);
 
 Token *scan_tokens(FileData *data, size_t *num_tokens) {
-    Token *tokens = malloc((data->length) * sizeof(Token));
+    Token *tokens = malloc((data->length + 1) * sizeof(Token));
 
-    for (int i = 0; i < strlen(data->contents + 1); i++) {
+    for (int i = 0; i < data->length; i++) {
         Token *token = &tokens[*num_tokens];
         (*num_tokens)++;
 
