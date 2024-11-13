@@ -217,6 +217,10 @@ Token *scan_token(FileData *data, int *position) {
                 token->type = SLASH;
             }
         } break;
+        case ' ':
+        case '\r':
+        case '\t': token->comment = 1; break;
+        case '\n': (*position)++; break;
 
         default: {
             token->error = true;
@@ -225,7 +229,6 @@ Token *scan_token(FileData *data, int *position) {
 
     return token;
 }
-
 
 bool match(FileData *data, int *position, char c) {
     if (isAtEnd(*position, data->length) ||
