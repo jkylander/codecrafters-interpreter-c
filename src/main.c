@@ -35,6 +35,7 @@ typedef struct {
     char *lexeme;
     int line;
     bool error;
+    bool comment;
 } Token;
 
 struct method_string_pair {
@@ -118,6 +119,9 @@ void interpreter(FileData *data) {
         } else {
             token = scan_token(data, &position);
 
+            if (token->comment) {
+                continue;
+            }
             if (!(token->error)) {
                 validTokens = realloc(validTokens, sizeof(Token *) * (tokenCount + 1));
                 validTokens[tokenCount] = token;
@@ -162,45 +166,16 @@ Token *scan_token(FileData *data, int *position) {
     char c = advance(data, position);
     token->lexeme[0] = c;
     switch (c) {
-        case '(': {
-            token->type = LEFT_PAREN;
-        } break;
-
-        case ')': {
-            token->type = RIGHT_PAREN;
-        } break;
-
-        case '{': {
-            token->type = LEFT_BRACE;
-        } break;
-
-        case '}': {
-            token->type = RIGHT_BRACE;
-        } break;
-
-        case ',': {
-            token->type = COMMA;
-        } break;
-
-        case '.': {
-            token->type = DOT;
-        } break;
-
-        case '-': {
-            token->type = MINUS;
-        } break;
-
-        case '+': {
-            token->type = PLUS;
-        } break;
-
-        case ';': {
-            token->type = SEMICOLON;
-        } break;
-
-        case '*': {
-            token->type = STAR;
-        } break;
+        case '(': token->type = LEFT_PAREN; break;
+        case ')': token->type = RIGHT_PAREN; break;
+        case '{': token->type = LEFT_BRACE; break;
+        case '}': token->type = RIGHT_BRACE; break;
+        case ',': token->type = COMMA; break;
+        case '.': token->type = DOT; break;
+        case '-': token->type = MINUS; break;
+        case '+': token->type = PLUS; break;
+        case ';': token->type = SEMICOLON; break;
+        case '*': token->type = STAR; break;
 
         case '!': {
             token->type = match(data, position, '=') ? BANG_EQUAL : BANG;
@@ -231,6 +206,18 @@ Token *scan_token(FileData *data, int *position) {
             }
         } break;
 
+        case '/': {
+            if (match(data, position, '/')) {
+                token->comment = true;
+                while (data->contents[*position] != '\n' &&
+                    data->contents[*position] != '\0') {
+                    c = advance(data, position);
+                }
+            } else {
+                token->type = SLASH;
+            }
+        } break;
+
         default: {
             token->error = true;
         }
@@ -238,6 +225,7 @@ Token *scan_token(FileData *data, int *position) {
 
     return token;
 }
+
 
 bool match(FileData *data, int *position, char c) {
     if (isAtEnd(*position, data->length) ||
