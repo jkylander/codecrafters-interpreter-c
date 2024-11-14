@@ -166,8 +166,7 @@ void interpreter(FileData *data) {
 
     for (int i = 0; i < tokenCount; i++) {
         print_token(*validTokens[i]);
-        if (validTokens[i]->lexeme)  free(validTokens[i]->lexeme);
-        if (validTokens[i]->literal) free(validTokens[i]->literal);
+        if (validTokens[i]->lexeme) free(validTokens[i]->lexeme);
         free(validTokens[i]);
     }
 
