@@ -33,7 +33,8 @@ typedef struct {
 typedef struct {
     TokenList type;
     char *lexeme;
-    int line;
+    char *literal;
+    size_t line;
     bool error;
     bool comment;
 } Token;
@@ -70,6 +71,7 @@ bool match(FileData *data, int *position, char c);
 bool isAtEnd(int position, int len);
 char advance(FileData *data, int *position);
 void interpreter(FileData *data);
+char peek(FileData *data, int pos);
 
 FileData *read_file_contents(const char *filename);
 int main(int argc, char *argv[]) {
@@ -106,13 +108,22 @@ int main(int argc, char *argv[]) {
 
 void interpreter(FileData *data) {
     int position = 0;
-    data->line++;
+    data->line = 1;
     bool error = false;
     Token *token;
     Token **validTokens = NULL;
     int tokenCount = 0;
+    bool onlyWhitespace = true;
 
     while(!isAtEnd(position, data->length)) {
+
+        if (data->contents[position] != ' ' &&
+            data->contents[position] != '\t' &&
+            data->contents[position] != '\r' &&
+            data->contents[position] != '\n') {
+            onlyWhitespace = false;
+        }
+
         if (data->contents[position] == '\n') {
             data->line++;
             position++;
@@ -127,19 +138,39 @@ void interpreter(FileData *data) {
                 validTokens[tokenCount] = token;
                 tokenCount++;
             } else {
-                fprintf(stderr, "[line %zu] Error: Unexpected character: %s\n", data->line, token->lexeme);
+                if (token->type == STRING) {
+                    fprintf(stderr, "[line %zu] Error: Unterminated string.\n", token->line);
+                } else {
+                    fprintf(stderr, "[line %zu] Error: Unexpected character: %s\n", token->line, token->lexeme);
+                }
                 error = true;
                 free(token->lexeme);
                 free(token);
             }
         }
     }
+
+    if (tokenCount == 0 || validTokens[tokenCount - 1]->type != EOF_TOKEN) {
+        Token *eof = malloc(sizeof(Token));
+        eof->type = EOF_TOKEN;
+        eof->lexeme = calloc(1, 1);
+        eof->literal = NULL;
+        eof->line = data->line;
+        eof->error = false;
+        eof->comment = false;
+
+        validTokens = realloc(validTokens, sizeof(Token *) * (tokenCount + 1));
+        validTokens[tokenCount] = eof;
+        tokenCount++;
+    }
+
     for (int i = 0; i < tokenCount; i++) {
         print_token(*validTokens[i]);
-        free(validTokens[i]->lexeme);
+        if (validTokens[i]->lexeme)  free(validTokens[i]->lexeme);
+        if (validTokens[i]->literal) free(validTokens[i]->literal);
         free(validTokens[i]);
     }
-    printf("EOF  null\n");
+
     if (error) exit(65);
     exit(0);
 }
@@ -160,11 +191,37 @@ char *str_from_type(TokenList type) {
 
 Token *scan_token(FileData *data, int *position) {
     Token *token = malloc(sizeof(Token));
-    token->lexeme = calloc(0, 3);
+    token->lexeme = calloc(1, 3);
+    token->error = false;
+    token->comment = false;
+
+    // Skip whitespace and handle newline
+    while (!isAtEnd(*position, data->length)) {
+        char c = peek(data, *position);
+        switch (c) {
+            case ' ':
+            case '\r':
+            case '\t':
+                (*position)++;
+                continue;
+            case '\n':
+                data->line++;
+                (*position)++;
+                continue;
+            default:
+                goto process_token;
+        }
+    }
+
+process_token:
     token->line = data->line;
-    token->error = 0;
+    if (isAtEnd(*position, data->length)) {
+        token->type = EOF_TOKEN;
+        return token;
+    }
     char c = advance(data, position);
     token->lexeme[0] = c;
+
     switch (c) {
         case '(': token->type = LEFT_PAREN; break;
         case ')': token->type = RIGHT_PAREN; break;
@@ -208,26 +265,65 @@ Token *scan_token(FileData *data, int *position) {
 
         case '/': {
             if (match(data, position, '/')) {
-                token->comment = true;
-                while (data->contents[*position] != '\n' &&
-                    data->contents[*position] != '\0') {
-                    c = advance(data, position);
+                while (!isAtEnd(*position, data->length) &&
+                        peek(data, *position) != '\n') {
+                    (*position)++;
                 }
+                token->comment = true;
             } else {
                 token->type = SLASH;
             }
         } break;
-        case ' ':
-        case '\r':
-        case '\t': token->comment = 1; break;
-        case '\n': (*position)++; break;
+
+        case '"': {
+            int start = *position;
+            token->type = STRING;
+
+            // Scan until closing quote or end
+            while (data->contents[*position] != '"' &&
+                !isAtEnd(*position, data->length)) {
+                if (data->contents[*position] == '\n') {
+                    data->line++;
+                }
+                (*position)++;
+            }
+
+
+            // Handle unterminated string
+            if (*position >= data->length) {
+                token->line = data->line;
+                token->error = true;
+                break;
+            }
+            int len = *position - start;
+            // Allocate and copy the string
+            char *lexeme = malloc(len + 3); // 2 for quotes, 1 for null
+            lexeme[0] = '"';
+            strncpy(lexeme, &data->contents[start], len);
+            lexeme[len + 1] = '"';
+            lexeme[len + 2] = '\0';
+            free(token->lexeme);
+            token->lexeme = lexeme;
+
+            char *literal = malloc(len + 1);
+            strncpy(literal, &data->contents[start], len);
+            literal[len] = '\0';
+            token->literal = literal;
+
+            (*position)++; // Skip closing quote
+        } break;
 
         default: {
             token->error = true;
+            token->line = data->line;
         }
     }
 
     return token;
+}
+
+char peek(FileData *data, int pos) {
+    return data->contents[pos];
 }
 
 bool match(FileData *data, int *position, char c) {
@@ -247,7 +343,11 @@ char advance(FileData *data, int *position) {
 bool isAtEnd(int position, int len) { return position >= len; }
 
 void print_token(Token token) {
-    printf("%s %s null\n", str_from_type(token.type), token.lexeme);
+    if (token.type == STRING) {
+        printf("%s \"%s\" %s\n", str_from_type(token.type), token.literal, token.literal);
+    } else {
+        printf("%s %s null\n", str_from_type(token.type), token.lexeme);
+    }
 }
 
 FileData *read_file_contents(const char *filename) {
