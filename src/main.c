@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -191,8 +192,15 @@ void print_token(Token token) {
         printf("%s %s %s\n", str_from_token(token.type), token.lexeme, (char *)token.literal);
     } else if (token.type == NUMBER) {
         printf("%s %s %.*f\n", str_from_token(token.type), token.lexeme, decimals_to_print(token.lexeme), *((double*)token.literal));
-
-    } else {
+    } else if (token.type >= AND && token.type <= WHILE) {
+        char type[6];
+        strcpy(type, token.lexeme);
+        for (int i = 0, n = strlen(token.lexeme); i < n; i++) {
+            type[i] = toupper(token.lexeme[i]);
+        }
+        printf("%s %s null\n", type, token.lexeme);
+    }
+    else {
         printf("%s %s null\n", str_from_token(token.type), token.lexeme);
     }
 }
