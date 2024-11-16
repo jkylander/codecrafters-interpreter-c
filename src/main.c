@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-
 typedef enum {
     LEFT_PAREN, RIGHT_PAREN,
     LEFT_BRACE, RIGHT_BRACE,
@@ -20,6 +19,7 @@ typedef enum {
     AND, CLASS, ELSE, FALSE, FUN,
     FOR, IF, NIL, OR, PRINT, RETURN,
     SUPER, THIS, TRUE, VAR, WHILE,
+
     EOF_TOKEN,
 
     TOKEN_COUNT,
@@ -39,10 +39,10 @@ typedef struct {
     bool comment;
 } Token;
 
-struct method_string_pair {
+struct string_pair {
     TokenList type;
     char *str;
-} known_methods[] = {
+} known_tokens[] = {
     {LEFT_PAREN, "LEFT_PAREN"}, {RIGHT_PAREN, "RIGHT_PAREN"},
     {LEFT_BRACE, "LEFT_BRACE"}, {RIGHT_BRACE, "RIGHT_BRACE"},
     {COMMA, "COMMA"}, {DOT, "DOT"}, {MINUS, "MINUS"}, {PLUS, "PLUS"},
@@ -55,9 +55,9 @@ struct method_string_pair {
 
     {IDENTIFIER, "IDENTIFIER"}, {STRING, "STRING"}, {NUMBER, "NUMBER"},
 
-    {AND, "AND"}, {CLASS, "CLASS"}, {ELSE, "ELSE"}, {FALSE, "FALSE"}, {FUN, "FUN"},
-    {FOR, "FOR"}, {IF, "IF"}, {NIL, "NIL"}, {OR, "OR"}, {PRINT, "PRINT"}, {RETURN, "RETURN"},
-    {SUPER, "SUPER"}, {THIS, "THIS"}, {TRUE, "TRUE"}, {VAR, "VAR"}, {WHILE, "WHILE"},
+    {AND, "and"}, {CLASS, "class"}, {ELSE, "else"}, {FALSE, "false"}, {FUN, "fun"},
+    {FOR, "for"}, {IF, "if"}, {NIL, "nil"}, {OR, "or"}, {PRINT, "print"}, {RETURN, "return"},
+    {SUPER, "super"}, {THIS, "this"}, {TRUE, "true"}, {VAR, "var"}, {WHILE, "while"},
 
     {EOF_TOKEN, "EOF"},
 };
@@ -68,8 +68,8 @@ static int current = 0;
 static int line = 1;
 FileData *data;
 
-TokenList type_from_str(char *str);
-char *str_from_type(TokenList type);
+TokenList token_from_str(char *str);
+char *str_from_token(TokenList type);
 FileData *read_file_contents(const char *filename);
 Token *scan_token();
 void print_token(Token token);
@@ -80,8 +80,11 @@ void interpreter();
 char peek();
 char peekNext();
 bool isDigit(char c);
+bool isAlpha(char c);
+bool isAlphaNumeric(char c);
 void string(Token *token);
 void number(Token *token);
+void identifier(Token *token);
 int decimals_to_print(char *src);
 
 FileData *read_file_contents(const char *filename);
@@ -185,12 +188,12 @@ void interpreter() {
 
 void print_token(Token token) {
     if (token.type == STRING) {
-        printf("%s %s %s\n", str_from_type(token.type), token.lexeme, (char *)token.literal);
+        printf("%s %s %s\n", str_from_token(token.type), token.lexeme, (char *)token.literal);
     } else if (token.type == NUMBER) {
-        printf("%s %s %.*f\n", str_from_type(token.type), token.lexeme, decimals_to_print(token.lexeme), *((double*)token.literal));
+        printf("%s %s %.*f\n", str_from_token(token.type), token.lexeme, decimals_to_print(token.lexeme), *((double*)token.literal));
 
     } else {
-        printf("%s %s null\n", str_from_type(token.type), token.lexeme);
+        printf("%s %s null\n", str_from_token(token.type), token.lexeme);
     }
 }
 
@@ -217,18 +220,18 @@ int decimals_to_print(char *src) {
     return response;
 }
 
-TokenList type_from_str(char *str) {
-    int n = sizeof(known_methods) / sizeof(known_methods[0]);
+TokenList token_from_str(char *str) {
+    int n = sizeof(known_tokens) / sizeof(known_tokens[0]);
     for (int i = 0; i < n; ++i) {
-        if (strcmp(str, known_methods[i].str) == 0) {
-            return known_methods[i].type;
+        if (strcmp(str, known_tokens[i].str) == 0) {
+            return known_tokens[i].type;
         }
     }
     return -1;
 }
 
-char *str_from_type(TokenList type) {
-    return known_methods[type].str;
+char *str_from_token(TokenList type) {
+    return known_tokens[type].str;
 }
 
 Token *scan_token() {
@@ -325,12 +328,31 @@ process_token:
             if (isDigit(c)) {
                 number(token);
                 break;
+            } else if (isAlpha(c)) {
+                identifier(token);
+                break;
             }
             token->error = true;
             token->line = line;
         }
     }
     return token;
+}
+
+void identifier(Token *token) {
+    token->line = line;
+    start = current - 1;
+    while (isAlphaNumeric(peek())) advance();
+    int len = current - start;
+    char *lexeme = malloc(len + 1);
+    strncpy(lexeme, &data->contents[start], len);
+    lexeme[len] = '\0';
+
+    TokenList keyword = token_from_str(lexeme);
+    if (keyword == -1) token->type = IDENTIFIER;
+    else token->type = keyword;
+    free(token->lexeme);
+    token->lexeme = lexeme;
 }
 
 void string(Token *token){
@@ -368,6 +390,16 @@ void string(Token *token){
 
 bool isDigit(char c) {
     return c >= '0' && c <= '9';
+}
+
+bool isAlpha(char c) {
+    return (c >= 'a' && c <= 'z') ||
+           (c >= 'A' && c <= 'Z') ||
+           (c == '_');
+}
+
+bool isAlphaNumeric(char c) {
+    return isAlpha(c) || isDigit(c);
 }
 
 void number(Token *token) {
