@@ -183,6 +183,9 @@ void interpreter() {
         free(validTokens[i]);
     }
 
+    free(validTokens);
+    free(data->contents);
+    free(data);
     if (error) exit(65);
     exit(0);
 }
