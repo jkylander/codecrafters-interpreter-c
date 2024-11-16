@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 
+
 typedef enum {
     LEFT_PAREN, RIGHT_PAREN,
     LEFT_BRACE, RIGHT_BRACE,
@@ -27,13 +28,12 @@ typedef enum {
 typedef struct {
     char *contents;
     size_t length;
-    size_t line;
 } FileData;
 
 typedef struct {
     TokenList type;
     char *lexeme;
-    char *literal;
+    void *literal;
     size_t line;
     bool error;
     bool comment;
@@ -62,16 +62,27 @@ struct method_string_pair {
     {EOF_TOKEN, "EOF"},
 };
 
+// Globals
+static int start = 0;
+static int current = 0;
+static int line = 1;
+FileData *data;
+
 TokenList type_from_str(char *str);
 char *str_from_type(TokenList type);
 FileData *read_file_contents(const char *filename);
-Token *scan_token(FileData *data, int *position);
+Token *scan_token();
 void print_token(Token token);
-bool match(FileData *data, int *position, char c);
-bool isAtEnd(int position, int len);
-char advance(FileData *data, int *position);
-void interpreter(FileData *data);
-char peek(FileData *data, int pos);
+bool match(char c);
+bool isAtEnd(int len);
+char advance();
+void interpreter();
+char peek();
+char peekNext();
+bool isDigit(char c);
+void string(Token *token);
+void number(Token *token);
+int decimals_to_print(char *src);
 
 FileData *read_file_contents(const char *filename);
 int main(int argc, char *argv[]) {
@@ -88,15 +99,15 @@ int main(int argc, char *argv[]) {
 
     if (strcmp(command, "tokenize") == 0) {
 
-        FileData *file_data = read_file_contents(argv[2]);
-        if ( file_data->length > 0) {
-            interpreter(file_data);
+        data = read_file_contents(argv[2]);
+        if ( data->length > 0) {
+            interpreter();
         } else {
             printf("EOF  null\n");
             return 0;
         }
-        free(file_data->contents);
-        free(file_data);
+        free(data->contents);
+        free(data);
 
     } else {
         fprintf(stderr, "Unknown command: %s\n", command);
@@ -106,29 +117,27 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void interpreter(FileData *data) {
-    int position = 0;
-    data->line = 1;
+void interpreter() {
     bool error = false;
     Token *token;
     Token **validTokens = NULL;
     int tokenCount = 0;
     bool onlyWhitespace = true;
 
-    while(!isAtEnd(position, data->length)) {
+    while(!isAtEnd(data->length)) {
 
-        if (data->contents[position] != ' ' &&
-            data->contents[position] != '\t' &&
-            data->contents[position] != '\r' &&
-            data->contents[position] != '\n') {
+        if (data->contents[current] != ' ' &&
+            data->contents[current] != '\t' &&
+            data->contents[current] != '\r' &&
+            data->contents[current] != '\n') {
             onlyWhitespace = false;
         }
 
-        if (data->contents[position] == '\n') {
-            data->line++;
-            position++;
+        if (data->contents[current] == '\n') {
+            line++;
+            current++;
         } else {
-            token = scan_token(data, &position);
+            token = scan_token();
 
             if (token->comment) {
                 continue;
@@ -155,7 +164,7 @@ void interpreter(FileData *data) {
         eof->type = EOF_TOKEN;
         eof->lexeme = calloc(1, 1);
         eof->literal = NULL;
-        eof->line = data->line;
+        eof->line = line;
         eof->error = false;
         eof->comment = false;
 
@@ -174,6 +183,40 @@ void interpreter(FileData *data) {
     exit(0);
 }
 
+void print_token(Token token) {
+    if (token.type == STRING) {
+        printf("%s %s %s\n", str_from_type(token.type), token.lexeme, (char *)token.literal);
+    } else if (token.type == NUMBER) {
+        printf("%s %s %.*f\n", str_from_type(token.type), token.lexeme, decimals_to_print(token.lexeme), *((double*)token.literal));
+
+    } else {
+        printf("%s %s null\n", str_from_type(token.type), token.lexeme);
+    }
+}
+
+int decimals_to_print(char *src) {
+    int len = strlen(src);
+    int response = 0;
+    int digit = 0;
+    int zero = 0;
+    for (int i = 0; i < len; i++) {
+        if (src[i] == '0' && digit) {
+            zero++;
+        }
+        if (src[i] != '0' && digit) {
+            response = response + 1 + zero;
+            zero = 0;
+        }
+        if (src[i] == '.') {
+            digit = 1;
+        }
+    }
+    if (!digit || zero) {
+        response = 1;
+    }
+    return response;
+}
+
 TokenList type_from_str(char *str) {
     int n = sizeof(known_methods) / sizeof(known_methods[0]);
     for (int i = 0; i < n; ++i) {
@@ -188,24 +231,24 @@ char *str_from_type(TokenList type) {
     return known_methods[type].str;
 }
 
-Token *scan_token(FileData *data, int *position) {
+Token *scan_token() {
     Token *token = malloc(sizeof(Token));
     token->lexeme = calloc(1, 3);
     token->error = false;
     token->comment = false;
 
     // Skip whitespace and handle newline
-    while (!isAtEnd(*position, data->length)) {
-        char c = peek(data, *position);
+    while (!isAtEnd(data->length)) {
+        char c = peek();
         switch (c) {
             case ' ':
             case '\r':
             case '\t':
-                (*position)++;
+                current++;
                 continue;
             case '\n':
-                data->line++;
-                (*position)++;
+                line++;
+                current++;
                 continue;
             default:
                 goto process_token;
@@ -213,12 +256,12 @@ Token *scan_token(FileData *data, int *position) {
     }
 
 process_token:
-    token->line = data->line;
-    if (isAtEnd(*position, data->length)) {
+    token->line = line;
+    if (isAtEnd(data->length)) {
         token->type = EOF_TOKEN;
         return token;
     }
-    char c = advance(data, position);
+    char c = advance();
     token->lexeme[0] = c;
 
     switch (c) {
@@ -234,14 +277,14 @@ process_token:
         case '*': token->type = STAR; break;
 
         case '!': {
-            token->type = match(data, position, '=') ? BANG_EQUAL : BANG;
+            token->type = match('=') ? BANG_EQUAL : BANG;
             if (token->type == BANG_EQUAL) {
                 token->lexeme[1] = '=';
             }
         } break;
 
         case '=': {
-            token->type = match(data, position, '=') ? EQUAL_EQUAL : EQUAL;
+            token->type = match('=') ? EQUAL_EQUAL : EQUAL;
             if (token->type == EQUAL_EQUAL) {
                 token->lexeme[1] = '=';
             }
@@ -249,24 +292,24 @@ process_token:
         } break;
 
         case '<': {
-            token->type = match(data, position, '=') ? LESS_EQUAL : LESS;
+            token->type = match('=') ? LESS_EQUAL : LESS;
             if (token->type == LESS_EQUAL) {
                 token->lexeme[1] = '=';
             }
         } break;
 
         case '>': {
-            token->type = match(data, position, '=') ? GREATER_EQUAL: GREATER;
+            token->type = match('=') ? GREATER_EQUAL: GREATER;
             if (token->type == GREATER_EQUAL) {
                 token->lexeme[1] = '=';
             }
         } break;
 
         case '/': {
-            if (match(data, position, '/')) {
-                while (!isAtEnd(*position, data->length) &&
-                        peek(data, *position) != '\n') {
-                    (*position)++;
+            if (match('/')) {
+                while (!isAtEnd(data->length) &&
+                        peek() != '\n') {
+                    current++;
                 }
                 token->comment = true;
             } else {
@@ -275,79 +318,107 @@ process_token:
         } break;
 
         case '"': {
-            int start = *position;
-            token->type = STRING;
-
-            // Scan until closing quote or end
-            while (data->contents[*position] != '"' &&
-                !isAtEnd(*position, data->length)) {
-                if (data->contents[*position] == '\n') {
-                    data->line++;
-                }
-                (*position)++;
-            }
-
-
-            // Handle unterminated string
-            if (*position >= data->length) {
-                token->line = data->line;
-                token->error = true;
-                break;
-            }
-            int len = *position - start;
-            // Allocate and copy the string
-            char *lexeme = malloc(len + 3); // 2 for quotes, 1 for null
-            lexeme[0] = '"';
-            strncpy(lexeme, &data->contents[start], len);
-            lexeme[len + 1] = '"';
-            lexeme[len + 2] = '\0';
-            free(token->lexeme);
-            token->lexeme = lexeme;
-
-            char *literal = malloc(len + 1);
-            strncpy(literal, &data->contents[start], len);
-            literal[len] = '\0';
-            token->literal = literal;
-
-            (*position)++; // Skip closing quote
+            string(token);
         } break;
 
         default: {
+            if (isDigit(c)) {
+                number(token);
+                break;
+            }
             token->error = true;
-            token->line = data->line;
+            token->line = line;
         }
     }
-
     return token;
 }
 
-char peek(FileData *data, int pos) {
-    return data->contents[pos];
+void string(Token *token){
+    start = current;
+    token->type = STRING;
+    while (peek() != '"' && !isAtEnd(data->length)) {
+        if ((peek() == '\n')) line++;
+        advance();
+    }
+    if (isAtEnd(data->length)) {
+        token->line = line;
+        token->error = true;
+        return;
+    }
+    int len = current - start;
+
+    // The closing ".
+    advance();
+
+    // Allocate and copy the string
+    char *lexeme = malloc(len + 3); // 2 for quotes, 1 for null
+    lexeme[0] = '"';
+    strncpy(lexeme + 1, &data->contents[start], len);
+    lexeme[len + 1] = '"';
+    lexeme[len + 2] = '\0';
+    free(token->lexeme);
+    token->lexeme = lexeme;
+
+    char *literal = malloc(len + 1);
+    strncpy(literal, &data->contents[start], len);
+    literal[len] = '\0';
+    token->literal = literal;
+    token->line = line;
 }
 
-bool match(FileData *data, int *position, char c) {
-    if (isAtEnd(*position, data->length) ||
-        data->contents[*position] != c) {
+bool isDigit(char c) {
+    return c >= '0' && c <= '9';
+}
+
+void number(Token *token) {
+    token->type = NUMBER;
+    start = current - 1;
+    while (isDigit(peek())) {
+        advance();
+    }
+    if (peek() == '.' && isDigit(peekNext())) {
+        advance();
+        while (isDigit(peek())) advance();
+    }
+    int len = current - start;
+    char *lexeme = malloc(len + 1);
+    strncpy(lexeme, &data->contents[start], len);
+    lexeme[len] = '\0';
+    free(token->lexeme);
+    token->lexeme = lexeme;
+
+    double number = strtod(lexeme, NULL);
+    token->literal = malloc(sizeof(double));
+    *((double *)(token->literal)) = number;
+    token->line = line;
+}
+
+char peek() {
+    return data->contents[current];
+}
+
+char peekNext() {
+    if (current <= data->length) {
+    return data->contents[current + 1];
+    }
+    return '\0';
+}
+
+bool match(char c) {
+    if (isAtEnd(data->length) ||
+        data->contents[current] != c) {
         return false;
     }
-    (*position)++;
+    current++;
     return true;
 }
 
-char advance(FileData *data, int *position) {
-    char c = data->contents[(*position)++];
+char advance() {
+    char c = data->contents[current++];
     return c;
 }
 
-bool isAtEnd(int position, int len) { return position >= len; }
-
-void print_token(Token token) {
-    if (token.type == STRING) {
-        printf("%s \"%s\" %s\n", str_from_type(token.type), token.literal, token.literal);
-    } else {
-        printf("%s %s null\n", str_from_type(token.type), token.lexeme);
-    }
-}
+bool isAtEnd(int len) { return current >= len; }
 
 FileData *read_file_contents(const char *filename) {
     FILE *file = fopen(filename, "r");
@@ -379,7 +450,6 @@ FileData *read_file_contents(const char *filename) {
     FileData *file_data = malloc(sizeof(FileData));
     file_data->contents = file_contents;
     file_data->length = file_size;
-    file_data->line = 0;
     fclose(file);
 
     return file_data;
