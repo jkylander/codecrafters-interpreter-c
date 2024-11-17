@@ -16,10 +16,9 @@ int main(int argc, char *argv[]) {
     bool error = false;
 
     if (strcmp(command, "tokenize") == 0) {
-        Token **validTokens = NULL;
-        int tokenCount = 0;
-        validTokens = tokenize(argv[2], &tokenCount, &error);
-        if (validTokens) free_tokens(validTokens, tokenCount);
+        TokenArray tokens = tokenize(argv[2], &error);
+        print_token_array(tokens);
+        free_token_array(&tokens);
 
     } else if(strcmp(command, "parse") == 0) {
 
