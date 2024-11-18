@@ -28,7 +28,7 @@ void print_ast(Expr *expr) {
     if (expr->type == LITERAL) {
         if (expr->as.literal.value.literal != NULL) {
             if (expr->as.literal.value.type == STRING) {
-                printf("%s ", (char *)expr->as.literal.value.literal);
+                printf("%s", (char *)expr->as.literal.value.literal);
             } else if (expr->as.literal.value.type == NUMBER) {
                 double value = *(double *)expr->as.literal.value.literal;
                 if (value == (int) value) {
@@ -38,7 +38,7 @@ void print_ast(Expr *expr) {
                 }
             }
         } else {
-            printf("%s ", expr->as.literal.value.lexeme);
+            printf("%s", expr->as.literal.value.lexeme);
         }
     } else if (expr->type == BINARY) {
         printf("%s", expr->as.binary.binary_op.lexeme);

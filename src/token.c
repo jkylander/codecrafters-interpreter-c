@@ -117,7 +117,7 @@ TokenArray tokenize(char *file, bool *error) {
                 if (token.type == STRING) {
                     fprintf(stderr, "[line %zu] Error: Unterminated string.\n", token.line);
                 } else {
-                    fprintf(stderr, "[line %zu]"A_RB" Error"A_RESET": Unexpected character: %s\n", token.line, token.lexeme);
+                    fprintf(stderr, "[line %zu] Error: Unexpected character: %s\n", token.line, token.lexeme);
                 }
                 *error = true;
                 if (token.lexeme) free(token.lexeme);
