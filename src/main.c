@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <sysexits.h>
 #include "token.h"
+#include "ast.h"
+#include "parse.h"
 
 int main(int argc, char *argv[]) {
     // Disable output buffering
@@ -21,6 +23,12 @@ int main(int argc, char *argv[]) {
         free_token_array(&tokens);
 
     } else if(strcmp(command, "parse") == 0) {
+        TokenArray tokens = tokenize(argv[2], &error);
+        if (!error) {
+            Parser parser = create_parser(&tokens);
+            Expr ast = parse_expression(&parser);
+            free_token_array(&tokens);
+        }
 
     } else {
         fprintf(stderr, "Unknown command: %s\n", command);

@@ -42,6 +42,7 @@ typedef struct {
     char *lexeme;
     void *literal;
     size_t line;
+    size_t length;
     bool error;
     bool comment;
 } Token;
@@ -56,6 +57,7 @@ TokenArray create_token_array(size_t initial_capacity);
 void free_token_array(TokenArray *array);
 void token_array_add(TokenArray *array, Token token);
 void print_token_array(TokenArray token_array);
+const char *str_from_token(TokenList type);
 
 TokenArray tokenize(char *file, bool *error);
 
