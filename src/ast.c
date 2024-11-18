@@ -32,9 +32,9 @@ void print_ast(Expr *expr) {
             } else if (expr->as.literal.value.type == NUMBER) {
                 double value = *(double *)expr->as.literal.value.literal;
                 if (value == (int) value) {
-                    printf(" %.1f", value);
+                    printf("%.1f", value);
                 } else {
-                    printf(" %g", value);
+                    printf("%g", value);
                 }
             }
         } else {
