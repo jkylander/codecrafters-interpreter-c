@@ -59,7 +59,8 @@ Expr parse_primary(Parser *parser) {
     }
 
     if (p_match(parser, TRUE) || p_match(parser, FALSE) ||
-        p_match(parser, NIL) || p_match(parser, NUMBER)) {
+        p_match(parser, NIL) || p_match(parser, NUMBER) ||
+        p_match(parser, STRING)) {
         return create_literal_expr(*p_previous(parser));
     }
     fprintf(stderr, "Error: Unexpected token, got token type %s.\n", str_from_token(p_peek(parser)->type));
