@@ -323,6 +323,7 @@ void identifier(Token *token) {
     else token->type = keyword;
     free(token->lexeme);
     token->lexeme = lexeme;
+    token->length = len;
 }
 
 void string(Token *token){
@@ -356,6 +357,7 @@ void string(Token *token){
     literal[len] = '\0';
     token->literal = literal;
     token->line = line;
+    token->length = len;
 }
 
 bool isDigit(char c) {
@@ -388,6 +390,7 @@ void number(Token *token) {
     lexeme[len] = '\0';
     free(token->lexeme);
     token->lexeme = lexeme;
+    token->length = len;
 
     double number = strtod(lexeme, NULL);
     token->literal = malloc(sizeof(double));
