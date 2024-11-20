@@ -26,7 +26,9 @@ int main(int argc, char *argv[]) {
         TokenArray tokens = tokenize(argv[2], &error);
         if (!error) {
             Parser parser = create_parser(&tokens);
-            Expr ast = parse_expression(&parser);
+            Expr ast = *parse(&parser);
+            print_ast(&ast);
+            printf("\n");
             free_token_array(&tokens);
         }
 
