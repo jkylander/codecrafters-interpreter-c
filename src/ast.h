@@ -47,8 +47,8 @@ struct Expr {
     } as;
 };
 
-Expr create_literal_expr(Token value);
-Expr create_grouping_expr(Expr *expression);
-Expr create_binary_expr(Token binary_op, Expr *left, Expr *right);
+Expr *create_literal_expr(Token value);
+Expr *create_grouping_expr(Expr *expression);
+Expr *create_binary_expr(Token binary_op, Expr *left, Expr *right);
 void print_ast(Expr *expr);
 #endif /* AST_H */

@@ -2,7 +2,7 @@
 #include "token.h"
 #include "parse.h"
 #include <stdio.h>
-
+#include <stdlib.h>
 Parser create_parser(TokenArray *array) {
     Parser parser;
     parser.array= array;
@@ -51,7 +51,56 @@ bool check(Parser *parser, TokenList type) {
     return p_peek(parser)->type == type;
 }
 
-Expr parse_primary(Parser *parser) {
+Expr *p_unary(Parser *parser) {
+    if (p_match(parser, BANG) || p_match(parser, MINUS)) {
+        Token *operator = p_previous(parser);
+        Expr *right = p_unary(parser);
+        Expr *r = malloc(sizeof(Expr));
+        r->type = UNARY;
+        r->as.unary.right = right;
+        r->as.unary.unary_op = *operator;
+        return r;
+    }
+    return p_primary(parser);
+}
+
+Expr *p_comparison(Parser *parser) {
+    Expr *expr = p_term(parser);
+    while (p_match(parser, GREATER) || p_match(parser, GREATER_EQUAL) ||
+            p_match(parser, LESS) || p_match(parser, LESS_EQUAL)) {
+        Token *operator = p_previous(parser);
+        Expr *right = p_term(parser);
+        expr->as.binary.left = expr;
+        expr->as.binary.right = right;
+        expr->as.binary.binary_op = *operator;
+    }
+    return expr;
+
+}
+
+Expr *p_equality(Parser *parser) {
+    Expr *expr = p_comparison(parser);
+    while (p_match(parser, BANG_EQUAL) || p_match(parser, EQUAL_EQUAL)) {
+        Token *operator = p_previous(parser);
+        Expr *right = p_comparison(parser);
+        expr->as.binary.left = expr;
+        expr->as.binary.right = right;
+        expr->as.binary.binary_op = *operator;
+    }
+    return expr;
+}
+
+Expr *p_factor(Parser *parser) {
+    Expr *expr = p_unary(parser);
+    while (p_match(parser, SLASH) || p_match(parser, STAR)) {
+        Token *operator = p_previous(parser);
+        Expr *right = p_unary(parser);
+        expr = create_binary_expr(*operator, expr, right);
+    }
+    return expr;
+}
+
+Expr *p_primary(Parser *parser) {
     Token *current = p_peek(parser);
     if (current == NULL || current->type == EOF_TOKEN) {
         fprintf(stderr, "Error: Unexpected end of input.\n");
@@ -59,35 +108,70 @@ Expr parse_primary(Parser *parser) {
     }
 
     if (p_match(parser, TRUE) || p_match(parser, FALSE) ||
-        p_match(parser, NIL) || p_match(parser, NUMBER) ||
+        p_match(parser, NIL)) {
+        return create_literal_expr(*p_previous(parser));
+    }
+    if (p_match(parser, NUMBER) ||
         p_match(parser, STRING)) {
         return create_literal_expr(*p_previous(parser));
+    }
+
+    if (p_match(parser, LEFT_PAREN)) {
+        Expr *expr = parse_expression(parser);
+        consume(parser, RIGHT_PAREN, "Expect ') after expression");
+        return create_grouping_expr(expr);
     }
     fprintf(stderr, "Error: Unexpected token, got token type %s.\n", str_from_token(p_peek(parser)->type));
     exit(1);
 }
 
-Expr parse_expression(Parser *parser) {
-    TokenArray *tokens = parser->array;
-    while (!p_isAtEnd(parser)) {
-        Expr expr = parse_primary(parser);
-        print_ast(&expr);
-    }
-    printf("\n");
-    return create_literal_expr(*p_previous(parser));
+Expr *parse_expression(Parser *parser) {
+    return p_equality(parser);
 }
 
-Expr parse_term(Parser *parser) {
-    Expr expr = parse_primary(parser);
-
-    Token *current;
-    while ((current = p_peek(parser)) != NULL && !p_isAtEnd(parser)) {
-        if (current->type != PLUS && current->type != MINUS) {
-            break;
+void synchronize(Parser *parser) {
+    p_advance(parser);
+    while (!p_isAtEnd(parser)) {
+        if (p_previous(parser)->type == SEMICOLON) return;
+        switch (p_peek(parser)->type) {
+            case CLASS:
+            case FUN:
+            case VAR:
+            case FOR:
+            case IF:
+            case WHILE:
+            case PRINT:
+            case RETURN:
+            return;
+            default: break;
         }
-        Token operator = *current;
-        Expr right = parse_primary(parser);
-        expr = create_binary_expr(operator, &expr, &right);
+        p_advance(parser);
+    }
+}
+
+Token *consume(Parser *parser, TokenList type, const char *message) {
+    if (check(parser, type)) return p_advance(parser);
+    Token *t = p_peek(parser);
+    if (t->type == EOF_TOKEN) {
+        fprintf(stderr, "%zu at end %s\n",t->line, message);
+        exit(1);
+    } else {
+        fprintf(stderr, "%zu at '%s' %s", t->line, t->lexeme, message);
+        exit(1);
+    }
+}
+
+Expr *p_term(Parser *parser) {
+    Expr *expr = p_factor(parser);
+    while (p_match(parser, MINUS) || p_match(parser, PLUS)) {
+        Token *operator = p_previous(parser);
+        Expr *right = p_factor(parser);
+        expr = create_binary_expr(*operator, expr, right);
     }
     return expr;
+}
+
+Expr *parse (Parser *parser) {
+    Expr *p = parse_expression(parser);
+    return p ? p : NULL;
 }

@@ -1,27 +1,45 @@
 #include "ast.h"
 #include "token.h"
 
-Expr create_binary_expr(Token binary_op, Expr *left, Expr *right) {
-    Expr expr;
-    expr.type = BINARY;
-    expr.as.binary.left = left;
-    expr.as.binary.right = right;
-    expr.as.binary.binary_op = binary_op;
+Expr *create_binary_expr(Token binary_op, Expr *left, Expr *right) {
+    Expr *expr = malloc(sizeof(Expr));
+    expr->type = BINARY;
+    expr->as.binary.left = left;
+    expr->as.binary.right = right;
+    expr->as.binary.binary_op = binary_op;
     return expr;
 }
 
-Expr create_literal_expr(Token value) {
-    Expr expr;
-    expr.type = LITERAL;
-    expr.as.literal.value = value;
+Expr *create_literal_expr(Token value) {
+    Expr *expr = malloc(sizeof(Expr));
+    expr->type = LITERAL;
+    expr->as.literal.value = value;
     return expr;
 }
 
-Expr create_grouping_expr(Expr *expression) {
-    Expr expr;
-    expr.type = GROUPING;
-    expr.as.grouping.expression = expression;
+Expr *create_grouping_expr(Expr *expression) {
+    Expr *expr = malloc(sizeof(Expr));
+    expr->type = GROUPING;
+    expr->as.grouping.expression = expression;
     return expr;
+}
+
+void free_expr(Expr *expr) {
+    if (!expr) return;
+    switch (expr->type) {
+        case BINARY:
+            free_expr(expr->as.binary.left);
+            free_expr(expr->as.binary.right);
+        break;
+        case GROUPING:
+            free_expr(expr->as.grouping.expression);
+        break;
+        case UNARY:
+            free_expr(expr->as.unary.right);
+        break;
+        case LITERAL: break;
+        default: break;
+    }
 }
 
 void print_ast(Expr *expr) {
@@ -42,13 +60,12 @@ void print_ast(Expr *expr) {
         }
     } else if (expr->type == BINARY) {
         printf("%s", expr->as.binary.binary_op.lexeme);
-        #if 0
-        for (int i = 0; i < expr->as.binary.binary_op.length; ++i) {
-            printf("%c", expr->as.binary.binary_op.lexeme[i]);
-        }
-        #endif
         print_ast(expr->as.binary.left);
         printf(" ");
         print_ast(expr->as.binary.right);
+    } else if (expr->type == GROUPING) {
+        printf("(group ");
+        print_ast(expr->as.grouping.expression);
+        printf(")");
     }
 }
