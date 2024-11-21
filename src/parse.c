@@ -70,9 +70,7 @@ Expr *p_comparison(Parser *parser) {
             p_match(parser, LESS) || p_match(parser, LESS_EQUAL)) {
         Token *operator = p_previous(parser);
         Expr *right = p_term(parser);
-        expr->as.binary.left = expr;
-        expr->as.binary.right = right;
-        expr->as.binary.binary_op = *operator;
+        expr = create_binary_expr(*operator, expr, right);
     }
     return expr;
 
