@@ -81,9 +81,7 @@ Expr *p_equality(Parser *parser) {
     while (p_match(parser, BANG_EQUAL) || p_match(parser, EQUAL_EQUAL)) {
         Token *operator = p_previous(parser);
         Expr *right = p_comparison(parser);
-        expr->as.binary.left = expr;
-        expr->as.binary.right = right;
-        expr->as.binary.binary_op = *operator;
+        expr = create_binary_expr(*operator, expr, right);
     }
     return expr;
 }
