@@ -117,7 +117,8 @@ Expr *p_primary(Parser *parser) {
         consume(parser, RIGHT_PAREN, "Expect ') after expression\n");
         return create_grouping_expr(expr);
     }
-    fprintf(stderr, "Error at '%s': Expect expression.\n", p_peek(parser)->lexeme);
+
+    fprintf(stderr, "[line %zu] Error at '%s': Expect expression.\n", current->line, current->lexeme);
     exit(65);
 }
 
