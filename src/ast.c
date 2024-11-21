@@ -59,13 +59,19 @@ void print_ast(Expr *expr) {
             printf("%s", expr->as.literal.value.lexeme);
         }
     } else if (expr->type == BINARY) {
-        printf("%s", expr->as.binary.binary_op.lexeme);
+        printf("(");
+        printf("%s ", expr->as.binary.binary_op.lexeme);
         print_ast(expr->as.binary.left);
         printf(" ");
         print_ast(expr->as.binary.right);
+        printf(")");
     } else if (expr->type == GROUPING) {
         printf("(group ");
         print_ast(expr->as.grouping.expression);
+        printf(")");
+    } else if (expr->type == UNARY) {
+        printf("(%s ", expr->as.unary.unary_op.lexeme);
+        print_ast(expr->as.unary.right);
         printf(")");
     }
 }
