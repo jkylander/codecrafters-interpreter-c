@@ -67,5 +67,9 @@ void print_ast(Expr *expr) {
         printf("(group ");
         print_ast(expr->as.grouping.expression);
         printf(")");
+    } else if (expr->type == UNARY) {
+        printf("(%s ", expr->as.unary.unary_op.lexeme);
+        print_ast(expr->as.unary.right);
+        printf(")");
     }
 }
