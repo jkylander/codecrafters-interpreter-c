@@ -114,11 +114,11 @@ Expr *p_primary(Parser *parser) {
 
     if (p_match(parser, LEFT_PAREN)) {
         Expr *expr = parse_expression(parser);
-        consume(parser, RIGHT_PAREN, "Expect ') after expression");
+        consume(parser, RIGHT_PAREN, "Expect ') after expression\n");
         return create_grouping_expr(expr);
     }
-    fprintf(stderr, "Error: Unexpected token, got token type %s.\n", str_from_token(p_peek(parser)->type));
-    exit(1);
+    fprintf(stderr, "Error at '%s': Expect expression.\n", p_peek(parser)->lexeme);
+    exit(65);
 }
 
 Expr *parse_expression(Parser *parser) {
@@ -150,10 +150,10 @@ Token *consume(Parser *parser, TokenList type, const char *message) {
     Token *t = p_peek(parser);
     if (t->type == EOF_TOKEN) {
         fprintf(stderr, "%zu at end %s\n",t->line, message);
-        exit(1);
+        exit(65);
     } else {
         fprintf(stderr, "%zu at '%s' %s", t->line, t->lexeme, message);
-        exit(1);
+        exit(65);
     }
 }
 
