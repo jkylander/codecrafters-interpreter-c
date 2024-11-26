@@ -14,7 +14,7 @@ operator       → "==" | "!=" | "<" | "<=" | ">" | ">="
                | "+"  | "-"  | "*" | "/" ;
 
 */
-#include "token.h"
+#include "scanner.h"
 typedef enum {
     LITERAL,
     UNARY,
@@ -50,5 +50,6 @@ struct Expr {
 Expr *create_literal_expr(Token value);
 Expr *create_grouping_expr(Expr *expression);
 Expr *create_binary_expr(Token binary_op, Expr *left, Expr *right);
+const char *str_from_type(ExprType type);
 void print_ast(Expr *expr);
 #endif /* AST_H */

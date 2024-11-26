@@ -1,9 +1,12 @@
 #include <stdlib.h>
+#include <string.h>
 #include <sysexits.h>
-#include "token.h"
+#include <stdio.h>
 #include "ast.h"
 #include "parse.h"
+#include "scanner.h"
 
+const char *read_file(const char *filename);
 int main(int argc, char *argv[]) {
     // Disable output buffering
     setbuf(stdout, NULL);
@@ -16,22 +19,29 @@ int main(int argc, char *argv[]) {
 
     const char *command = argv[1];
     bool error = false;
-
     if (strcmp(command, "tokenize") == 0) {
-        TokenArray tokens = tokenize(argv[2], &error);
+        const char *data = read_file(argv[2]);
+        TokenArray tokens = scan(data);
         print_token_array(tokens);
         free_token_array(&tokens);
 
     } else if(strcmp(command, "parse") == 0) {
-        TokenArray tokens = tokenize(argv[2], &error);
+        const char *data = read_file(argv[2]);
+        TokenArray tokens = scan(data);
         if (!error) {
             Parser parser = create_parser(&tokens);
             Expr ast = *parse(&parser);
-            print_ast(&ast);
+            /*print_ast(&ast);*/
             printf("\n");
             free_token_array(&tokens);
         }
-
+    } else if (strcmp(command, "evaluate") == 0) {
+        const char *data = read_file(argv[2]);
+        TokenArray tokens = scan(data);
+        if (!error) {
+            Parser parser = create_parser(&tokens);
+            Expr ast = *parse(&parser);
+        }
     } else {
         fprintf(stderr, "Unknown command: %s\n", command);
         return EX_USAGE;
@@ -43,3 +53,33 @@ int main(int argc, char *argv[]) {
 }
 
 
+const char *read_file(const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        fprintf(stderr, "Error reading file: %s\n", filename);
+        return NULL;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    rewind(file);
+
+    char *file_contents = malloc(file_size + 1);
+    if (file_contents == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        fclose(file);
+        return NULL;
+    }
+
+    size_t bytes_read = fread(file_contents, 1, file_size, file);
+    if (bytes_read < file_size) {
+        fprintf(stderr, "Error reading file contents\n");
+        free(file_contents);
+        fclose(file);
+        return NULL;
+    }
+
+    file_contents[file_size] = '\0';
+
+    return file_contents;
+}

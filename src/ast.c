@@ -1,6 +1,13 @@
 #include "ast.h"
-#include "token.h"
+#include <stdlib.h>
 
+struct string_pair_type {
+    ExprType type;
+    const char *str;
+} known_types[] = {
+    {LITERAL, "LITERAL"}, {UNARY, "UNARY"},
+    {BINARY, "BINARY"}, {GROUPING, "GROUPING"},
+};
 Expr *create_binary_expr(Token binary_op, Expr *left, Expr *right) {
     Expr *expr = malloc(sizeof(Expr));
     expr->type = BINARY;
@@ -42,6 +49,10 @@ void free_expr(Expr *expr) {
     }
 }
 
+const char *str_from_type(ExprType type) {
+    return known_types[type].str;
+}
+#if 0
 void print_ast(Expr *expr) {
     if (expr->type == LITERAL) {
         if (expr->as.literal.value.literal != NULL) {
@@ -75,3 +86,4 @@ void print_ast(Expr *expr) {
         printf(")");
     }
 }
+#endif
