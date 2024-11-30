@@ -22,7 +22,24 @@ typedef enum {
     GROUPING,
 
     EXPR_COUNT
-} ExprType ;
+} ExprType;
+
+typedef enum {
+    VAL_BOOL,
+    VAL_NIL,
+    VAL_NUMBER,
+    VAL_STRING,
+} ValueType;
+
+typedef struct {
+    ValueType type;
+    union {
+        bool boolean;
+        double number;
+        char *string;
+    } as;
+} Value;
+
 
 typedef struct Expr Expr;
 struct Expr {
@@ -39,7 +56,7 @@ struct Expr {
             Expr *right;
         } unary;
         struct {
-            Token value;
+            Value *value;
         } literal;
         struct {
             Expr *expression;
