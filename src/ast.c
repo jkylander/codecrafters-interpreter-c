@@ -75,39 +75,40 @@ const char *str_from_type(ExprType type) {
     return known_types[type].str;
 }
 void print_ast(Expr *expr) {
-    if (expr->type == LITERAL) {
-        if (expr->as.literal.value->type == VAL_STRING) {
-            printf("\"%s\"", expr->as.literal.value->as.string);
-        } else if (expr->as.literal.value->type == VAL_BOOL) {
-            printf("%s", expr->as.literal.value->as.boolean == 1 ? "true" : "false");
+    if (expr != NULL) {
+        if (expr->type == LITERAL) {
+            if (expr->as.literal.value->type == VAL_STRING) {
+                printf("%s", expr->as.literal.value->as.string);
+            } else if (expr->as.literal.value->type == VAL_BOOL) {
+                printf("%s", expr->as.literal.value->as.boolean == 1 ? "true" : "false");
 
-        } else if (expr->as.literal.value->type == VAL_NIL) {
-            printf("nil");
+            } else if (expr->as.literal.value->type == VAL_NIL) {
+                printf("nil");
 
-        } else if (expr->as.literal.value->type == VAL_NUMBER) {
-            double value = expr->as.literal.value->as.number;
-            if (value == (int) value) {
-                printf("%.1f", value);
+            } else if (expr->as.literal.value->type == VAL_NUMBER) {
+                double value = expr->as.literal.value->as.number;
+                if (value == (int) value) {
+                    printf("%.1f", value);
+                } else {
+                    printf("%g", value);
+                }
             } else {
-                printf("%g", value);
+                printf("%s", expr->as.literal.value->as.string);
             }
-        } else {
-            printf("%s", expr->as.literal.value->as.string);
-
+        } else if (expr->type == BINARY) {
+            printf("(%.*s ", expr->as.binary.binary_op.length, expr->as.binary.binary_op.start);
+            print_ast(expr->as.binary.left);
+            printf(" ");
+            print_ast(expr->as.binary.right);
+            printf(")");
+        } else if (expr->type == GROUPING) {
+            printf("(group ");
+            print_ast(expr->as.grouping.expression);
+            printf(")");
+        } else if (expr->type == UNARY) {
+            printf("(%.*s ", expr->as.unary.unary_op.length, expr->as.unary.unary_op.start);
+            print_ast(expr->as.unary.right);
+            printf(")");
         }
-    } else if (expr->type == BINARY) {
-        printf("(%.*s ", expr->as.binary.binary_op.length, expr->as.binary.binary_op.start);
-        print_ast(expr->as.binary.left);
-        printf(" ");
-        print_ast(expr->as.binary.right);
-        printf(")");
-    } else if (expr->type == GROUPING) {
-        printf("(group ");
-        print_ast(expr->as.grouping.expression);
-        printf(")");
-    } else if (expr->type == UNARY) {
-        printf("(%.*s ", expr->as.unary.unary_op.length, expr->as.unary.unary_op.start);
-        print_ast(expr->as.unary.right);
-        printf(")");
     }
 }
