@@ -5,6 +5,7 @@
 #include "ast.h"
 #include "parse.h"
 #include "scanner.h"
+#include "interpreter.h"
 
 const char *read_file(const char *filename);
 int main(int argc, char *argv[]) {
@@ -13,7 +14,7 @@ int main(int argc, char *argv[]) {
     setbuf(stderr, NULL);
 
     if (argc < 3) {
-        fprintf(stderr, "Usage: ./your_program tokenize <filename>\n");
+        fprintf(stderr, "Usage: ./your_program tokenize|parse|evaluate <filename>\n");
         return EX_USAGE;
     }
 
@@ -22,6 +23,7 @@ int main(int argc, char *argv[]) {
     if (strcmp(command, "tokenize") == 0) {
         const char *data = read_file(argv[2]);
         TokenArray tokens = scan(data);
+        if (tokens.hadError == true) error = true;
         print_token_array(tokens);
         free_token_array(&tokens);
 
@@ -30,23 +32,26 @@ int main(int argc, char *argv[]) {
         TokenArray tokens = scan(data);
         if (!error) {
             Parser parser = create_parser(&tokens);
+            if (parser.hadError) error = true;
             Expr ast = *parse(&parser);
-            /*print_ast(&ast);*/
+            print_ast(&ast);
             printf("\n");
             free_token_array(&tokens);
         }
     } else if (strcmp(command, "evaluate") == 0) {
         const char *data = read_file(argv[2]);
         TokenArray tokens = scan(data);
-        if (!error) {
-            Parser parser = create_parser(&tokens);
-            Expr ast = *parse(&parser);
-        }
+        if (tokens.hadError == true) error = true;
+        Parser parser = create_parser(&tokens);
+        if (parser.hadError) error = true;
+        Expr ast = *parse(&parser);
+        Value value = evaluate(&ast);
+        print_value(&value);
+
     } else {
         fprintf(stderr, "Unknown command: %s\n", command);
         return EX_USAGE;
     }
-
 
     if (error) return EX_DATAERR;
     return EX_OK;

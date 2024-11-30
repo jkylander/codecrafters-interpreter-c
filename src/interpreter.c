@@ -1,41 +1,56 @@
+#include "interpreter.h"
+#include <stdio.h>
 #include <stdlib.h>
-#include "ast.h"
-#include "scanner.h"
 
-Token visit_literal(Expr *expr);
-Token visit_grouping(Expr *expr);
-Token visit_binary(Expr *expr);
-Token visit_unary(Expr *expr);
-Token evaluate(Expr *expr);
+#define AS_BOOL(value) ((value).as.boolean)
+#define AS_NUMBER(value) ((value).as.number)
 
-Token visit_literal(Expr *expr) {
-    return expr->as.literal.value;
+#define BOOL_VAL(value) ((Value){VAL_BOOL, {.boolean = value}})
+#define NIL_VAL(value) ((Value){VAL_NIL, {.number = 0}})
+#define NUMBER_VAL(value) ((Value){VAL_NUMBER, {.number = value}})
+
+#define IS_BOOL(value) ((value).type == VAL_BOOL)
+#define IS_NIL(value) ((value).type == VAL_NIL)
+#define IS_NUMBER(value) ((value).type == VAL_NUMBER)
+
+Value visit_literal(Expr *expr);
+Value visit_grouping(Expr *expr);
+Value visit_binary(Expr *expr);
+Value visit_unary(Expr *expr);
+Value evaluate(Expr *expr);
+void print_value(Value *value);
+
+Value visit_literal(Expr *expr) {
+    return *expr->as.literal.value;
 }
-Token visit_grouping(Expr *expr) {
+Value visit_grouping(Expr *expr) {
     return evaluate(expr->as.grouping.expression);
 }
 
-Token visit_binary(Expr *expr) {
+Value visit_binary(Expr *expr) {
+    TokenType operatorType = expr->as.binary.binary_op.type;
 
 }
 
-Token visit_unary(Expr *expr) {
-    Token right = evaluate(expr->as.unary.right);
+Value visit_unary(Expr *expr) {
+    Value right = evaluate(expr->as.unary.right);
     switch(expr->as.unary.unary_op.type) {
         case TOKEN_MINUS:
             /**(double *)right.literal = -*(double *)right.literal;*/
-            return right;
+            right.as.number = -right.as.number;
             break;
         case TOKEN_BANG:
+            right.as.number = !right.as.number;
             break;
         default: 
             /*fprintf(stderr, "[line %d] Error: Unexpected type %s. Token %s\n", expr->line, str_from_type(expr->type), str_from_token(expr->as.unary.unary_op.type));*/
             break;
     }
+    return right;
 
 }
 
-Token evaluate(Expr *expr) {
+Value evaluate(Expr *expr) {
     switch (expr->type) {
         case LITERAL:
             return visit_literal(expr);
@@ -49,6 +64,23 @@ Token evaluate(Expr *expr) {
             /*fprintf(stderr, "[line %d] Error: Unexpected type %s.\n", expr->line, str_from_type(expr->type));*/
             exit(65);
             break;
+    }
+}
+
+void print_value(Value *value) {
+    switch(value->type) {
+        case VAL_BOOL:
+            printf("%s\n", value->as.boolean == 1 ? "true" : "false");
+            break;
+        case VAL_NIL:
+            printf("nil\n");
+            break;
+        case VAL_STRING:
+            printf("%s\n", value->as.string);
+            break;
+        case VAL_NUMBER:
+            printf("%f\n", value->as.number);
+        default: break;
     }
 }
 
