@@ -59,7 +59,7 @@ Value evaluate(Expr *expr) {
         case UNARY:
             return visit_unary(expr);
         case GROUPING:
-            return evaluate(expr);
+            return visit_grouping(expr);
         default:
             /*fprintf(stderr, "[line %d] Error: Unexpected type %s.\n", expr->line, str_from_type(expr->type));*/
             exit(65);
