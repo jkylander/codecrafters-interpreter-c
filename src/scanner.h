@@ -63,6 +63,7 @@ typedef struct {
     Token *tokens;
     int count;
     int capacity;
+    bool hadError;
 } TokenArray;
 
 void initScanner(const char *source);

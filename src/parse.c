@@ -1,11 +1,14 @@
 #include "ast.h"
+#include "scanner.h"
 #include "parse.h"
 #include <stdio.h>
 #include <stdlib.h>
+
 Parser create_parser(TokenArray *array) {
     Parser parser;
     parser.array= array;
     parser.current = 0;
+    parser.hadError = false;
     return parser;
 }
 Token *p_peek(Parser *parser) {
@@ -116,9 +119,29 @@ Expr *p_primary(Parser *parser) {
         consume(parser, TOKEN_RIGHT_PAREN, "Expect ') after expression\n");
         return create_grouping_expr(expr);
     }
+    errorAtCurrent(parser, "Expect expression.\n");
+    return NULL;
 
-    fprintf(stderr, "[line %d] Error at '%.*s': Expect expression.\n", current->line, current->length, current->start);
-    exit(65);
+    /*fprintf(stderr, "[line %d] Error at '%.*s': Expect expression.\n", current->line, current->length, current->start);*/
+    /*exit(65);*/
+}
+
+void errorAt(Parser *parser, const char *message) {
+    Token *token = p_peek(parser);
+    fprintf(stderr, "[line %d] Error", token->line);
+    if (token->type == TOKEN_EOF) {
+        fprintf(stderr, " at end");
+    } else if (token->type == TOKEN_ERROR) {
+        // nothing
+    } else {
+        fprintf(stderr, " at '%.*s'", token->length, token->start);
+    }
+    fprintf(stderr, "; %s\n", message);
+    parser->hadError = true;
+}
+
+void errorAtCurrent(Parser *parser, const char *message) {
+    errorAt(parser, message);
 }
 
 Expr *parse_expression(Parser *parser) {
@@ -147,14 +170,8 @@ void synchronize(Parser *parser) {
 
 Token *consume(Parser *parser, TokenType type, const char *message) {
     if (check(parser, type)) return p_advance(parser);
-    Token *t = p_peek(parser);
-    if (t->type == TOKEN_EOF) {
-        fprintf(stderr, "%d at end %s\n",t->line, message);
-        exit(65);
-    } else {
-        fprintf(stderr, "%d at '%.*s' %s", t->line, t->length, t->start, message);
-        exit(65);
-    }
+    errorAtCurrent(parser, message);
+    return NULL;
 }
 
 Expr *p_term(Parser *parser) {

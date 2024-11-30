@@ -25,6 +25,7 @@ TokenArray create_token_array(int initial_capacity) {
     array.tokens = malloc(initial_capacity * sizeof(Token));
     array.count = 0;
     array.capacity = initial_capacity;
+    array.hadError = false;
     return array;
 }
 
@@ -276,7 +277,7 @@ TokenArray scan(const char *source) {
         Token token = scanToken();
         if (token.type != TOKEN_ERROR) {
             token_array_add(&token_array, token);
-        }
+        } else { token_array.hadError = true; }
 
         if (token.type == TOKEN_EOF) break;
     }
