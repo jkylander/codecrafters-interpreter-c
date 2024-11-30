@@ -79,7 +79,9 @@ void print_value(Value *value) {
             printf("%s\n", value->as.string);
             break;
         case VAL_NUMBER:
-            printf("%f\n", value->as.number);
+            if (value->as.number == (int)value->as.number)
+                printf("%d\n", (int)value->as.number);
+            else printf("%g\n", value->as.number);
         default: break;
     }
 }
