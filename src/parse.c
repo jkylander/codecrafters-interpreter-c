@@ -102,7 +102,7 @@ Expr *p_primary(Parser *parser) {
     Token *current = p_peek(parser);
     if (current == NULL || current->type == TOKEN_EOF) {
         fprintf(stderr, "Error: Unexpected end of input.\n");
-        exit(1);
+        exit(65);
     }
 
     if (p_match(parser, TOKEN_TRUE) || p_match(parser, TOKEN_FALSE) ||
@@ -137,7 +137,8 @@ void errorAt(Parser *parser, const char *message) {
         fprintf(stderr, " at '%.*s'", token->length, token->start);
     }
     fprintf(stderr, "; %s\n", message);
-    parser->hadError = true;
+    exit(65);
+    /*parser->hadError = true;*/
 }
 
 void errorAtCurrent(Parser *parser, const char *message) {

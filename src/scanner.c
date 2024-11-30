@@ -56,12 +56,15 @@ void print_token(Token token) {
     } else if (token.type == TOKEN_NUMBER) {
         double value = strtod(token.start, NULL);
         if (value == (int) value) {
-            printf("%s %.1f %.1f\n", str_from_token(token.type), value, value);
+            printf("%s %.*s %.1f\n", str_from_token(token.type), token.length, token.start, value);
         } else {
-            printf("%s %g %g\n", str_from_token(token.type), value, value);
+            printf("%s %.*s %g\n", str_from_token(token.type), token.length, token.start, value);
         }
     } else if (token.type >= TOKEN_AND && token.type <= TOKEN_WHILE) {
         printf("%s %.*s null\n", str_from_token(token.type), token.length, token.start);
+    } else if (token.type == TOKEN_ERROR) {
+        fprintf(stderr, "[line %d] Error: %.*s\n", token.line, token.length, token.start);
+
     }
     else {
         printf("%s %.*s null\n", str_from_token(token.type), token.length, token.start);
@@ -160,7 +163,9 @@ static Token string() {
         advance();
     }
 
-    if (isAtEnd()) return errorToken("Unterminated string.");
+    if (isAtEnd()) {
+        return errorToken("Unterminated string.");
+    }
     Token r = makeToken(TOKEN_STRING);
     // The closing "
     advance();
@@ -266,7 +271,9 @@ Token scanToken() {
             match('=') ? TOKEN_GREATER_EQUAL: TOKEN_GREATER);
         case '"': return string();
       }
-    return errorToken("Unexpected character.");
+    char *error = malloc(25);
+    sprintf(error, "Unexpected character: %c", c);
+    return errorToken(error);
 }
 
 TokenArray scan(const char *source) {
@@ -275,9 +282,8 @@ TokenArray scan(const char *source) {
     TokenArray token_array = create_token_array(16);
     for (;;) {
         Token token = scanToken();
-        if (token.type != TOKEN_ERROR) {
-            token_array_add(&token_array, token);
-        } else { token_array.hadError = true; }
+        if (token.type == TOKEN_ERROR) token_array.hadError = true;
+        token_array_add(&token_array, token);
 
         if (token.type == TOKEN_EOF) break;
     }
