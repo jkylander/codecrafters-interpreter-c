@@ -1,6 +1,8 @@
 #include "interpreter.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "ast.h"
+#include "scanner.h"
 
 #define AS_BOOL(value) ((value).as.boolean)
 #define AS_NUMBER(value) ((value).as.number)
@@ -29,28 +31,108 @@ Value visit_grouping(Expr *expr) {
 
 Value visit_binary(Expr *expr) {
     TokenType operatorType = expr->as.binary.binary_op.type;
+    Value right = evaluate(expr->as.binary.right);
+    Value left = evaluate(expr->as.binary.left);
 
+    // Number operations
+    if (left.type == VAL_NUMBER && right.type == VAL_NUMBER) {
+        Value result = {.type = VAL_NUMBER};
+        switch(expr->as.binary.binary_op.type) {
+            case TOKEN_PLUS:
+                result.as.number = left.as.number + right.as.number;
+                return result;
+
+            case TOKEN_MINUS:
+                result.as.number = left.as.number - right.as.number;
+                return result;
+
+            case TOKEN_STAR:
+                result.as.number = left.as.number * right.as.number;
+                return result;
+
+            case TOKEN_SLASH:
+                if (right.as.number == 0) {
+                    fprintf(stderr, "Division by zero");
+                    exit(65);
+                }
+                result.as.number = left.as.number / right.as.number;
+                return result;
+
+            default: break;
+        }
+    }
+    // Comparison operations
+    if (left.type == VAL_NUMBER && right.type == VAL_NUMBER) {
+        Value result = {.type = VAL_BOOL };
+        switch(expr->as.binary.binary_op.type) {
+            case TOKEN_GREATER:
+                result.as.boolean= left.as.number > right.as.number;
+                return result;
+
+            case TOKEN_GREATER_EQUAL:
+                result.as.boolean = left.as.number >= right.as.number;
+                return result;
+
+            case TOKEN_LESS:
+                result.as.boolean = left.as.number < right.as.number;
+                return result;
+
+            case TOKEN_LESS_EQUAL:
+                result.as.boolean = left.as.number <= right.as.number;
+                return result;
+
+            case TOKEN_EQUAL_EQUAL:
+                result.as.boolean = left.as.number == right.as.number;
+                return result;
+
+            case TOKEN_BANG_EQUAL:
+                result.as.boolean = left.as.number != right.as.number;
+                return result;
+
+            default: break;
+        }
+    }
+    return (Value) {.type = VAL_NIL};
+}
+
+bool is_truthy(Value value) {
+    switch(value.type) {
+        case VAL_NIL:
+            return false;
+        case VAL_BOOL:
+            return value.as.boolean;
+        case VAL_NUMBER:
+            if (value.as.number == 0) return false;
+            return true;
+        case VAL_STRING:
+            return true;
+        default: return false;
+    }
 }
 
 Value visit_unary(Expr *expr) {
-    Value right = evaluate(expr->as.unary.right);
+    Value operand = evaluate(expr->as.unary.right);
     switch(expr->as.unary.unary_op.type) {
         case TOKEN_MINUS:
-            /**(double *)right.literal = -*(double *)right.literal;*/
-            right.as.number = -right.as.number;
+            if (operand.type == VAL_NUMBER) {
+                Value result = {.type = VAL_NUMBER, .as.number = -operand.as.number};
+                return result;
+            }
             break;
         case TOKEN_BANG:
-            right.as.number = !right.as.number;
-            break;
+            Value result = {.type = VAL_BOOL, .as.boolean = !is_truthy(operand)};
+            return result;
         default: 
-            /*fprintf(stderr, "[line %d] Error: Unexpected type %s. Token %s\n", expr->line, str_from_type(expr->type), str_from_token(expr->as.unary.unary_op.type));*/
             break;
     }
-    return right;
-
+    return (Value){.type = VAL_NIL};
 }
 
 Value evaluate(Expr *expr) {
+    if (!expr) {
+        Value nil_value = {.type = VAL_NIL };
+        return nil_value;
+    }
     switch (expr->type) {
         case LITERAL:
             return visit_literal(expr);
@@ -61,7 +143,6 @@ Value evaluate(Expr *expr) {
         case GROUPING:
             return visit_grouping(expr);
         default:
-            /*fprintf(stderr, "[line %d] Error: Unexpected type %s.\n", expr->line, str_from_type(expr->type));*/
             exit(65);
             break;
     }
