@@ -16,10 +16,18 @@ operator       → "==" | "!=" | "<" | "<=" | ">" | ">="
 */
 #include "scanner.h"
 typedef enum {
-    LITERAL,
-    UNARY,
+    ASSIGN,
     BINARY,
+    CALL,
+    GET,
     GROUPING,
+    LITERAL,
+    LOGICAL,
+    SET,
+    SUPER,
+    THIS,
+    UNARY,
+    VARIABLE,
 
     EXPR_COUNT
 } ExprType;
@@ -29,16 +37,16 @@ typedef enum {
     VAL_NIL,
     VAL_NUMBER,
     VAL_STRING,
-} ValueType;
+} ObjectType;
 
 typedef struct {
-    ValueType type;
+    ObjectType type;
     union {
         bool boolean;
         double number;
         char *string;
     } as;
-} Value;
+} Object;
 
 
 typedef struct Expr Expr;
@@ -47,20 +55,53 @@ struct Expr {
     int line;
     union {
         struct {
-            Token binary_op;
+            Token name;
+            Expr *value;
+        } assign;
+        struct {
+            Token operator;
             Expr *left;
             Expr *right;
         } binary;
         struct {
-            Token unary_op;
-            Expr *right;
-        } unary;
+            Expr *callee;
+            Token paren;
+            Expr **arguments;
+        } call;
         struct {
-            Value *value;
-        } literal;
+            Expr *object;
+            Token name;
+        } get;
         struct {
             Expr *expression;
         } grouping;
+        struct {
+            Object *value;
+        } literal;
+        struct {
+            Expr *left;
+            Token operator;
+            Expr *right;
+        } logical;
+        struct {
+            Expr *object;
+            Token name;
+            Expr *value;
+        } set;
+        struct {
+            Token keyword;
+            Token method;
+        } super;
+        struct {
+            Token keyword;
+        } this;
+        struct {
+            Token operator;
+            Expr *right;
+        } unary;
+        struct {
+            Token name;
+        } variable;
     } as;
 };
 

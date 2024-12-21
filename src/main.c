@@ -14,22 +14,20 @@ int main(int argc, char *argv[]) {
     setbuf(stderr, NULL);
 
     if (argc < 3) {
-        fprintf(stderr, "Usage: ./your_program tokenize|parse|evaluate <filename>\n");
+        fprintf(stderr, "Usage: ./your_program tokenize|parse|evaluate|run <filename>\n");
         return EX_USAGE;
     }
 
     const char *command = argv[1];
     bool error = false;
+    const char *data = read_file(argv[2]);
+    TokenArray tokens = scan(data);
     if (strcmp(command, "tokenize") == 0) {
-        const char *data = read_file(argv[2]);
-        TokenArray tokens = scan(data);
         if (tokens.hadError == true) error = true;
         print_token_array(tokens);
         free_token_array(&tokens);
 
     } else if(strcmp(command, "parse") == 0) {
-        const char *data = read_file(argv[2]);
-        TokenArray tokens = scan(data);
         if (!error) {
             Parser parser = create_parser(&tokens);
             if (parser.hadError) error = true;
@@ -39,13 +37,19 @@ int main(int argc, char *argv[]) {
             free_token_array(&tokens);
         }
     } else if (strcmp(command, "evaluate") == 0) {
-        const char *data = read_file(argv[2]);
-        TokenArray tokens = scan(data);
         if (tokens.hadError == true) error = true;
         Parser parser = create_parser(&tokens);
         if (parser.hadError) error = true;
         Expr ast = *parse(&parser);
-        Value value = evaluate(&ast);
+        Object value = evaluate(&ast);
+        print_value(&value);
+
+    } else if (strcmp(command, "run") == 0) {
+        if (tokens.hadError == true) error = true;
+        Parser parser = create_parser(&tokens);
+        if (parser.hadError) error = true;
+        Expr ast = *parse(&parser);
+        Object value = evaluate(&ast);
         print_value(&value);
 
     } else {

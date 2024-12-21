@@ -15,7 +15,7 @@ Expr *create_binary_expr(Token binary_op, Expr *left, Expr *right) {
     expr->type = BINARY;
     expr->as.binary.left = left;
     expr->as.binary.right = right;
-    expr->as.binary.binary_op = binary_op;
+    expr->as.binary.operator = binary_op;
     expr->line = left->line;
     return expr;
 }
@@ -23,7 +23,7 @@ Expr *create_binary_expr(Token binary_op, Expr *left, Expr *right) {
 Expr *create_literal_expr(Token token) {
     Expr *expr = malloc(sizeof(Expr));
     expr->type = LITERAL;
-    Value *v = malloc(sizeof(Value));
+    Object *v = malloc(sizeof(Object));
 
     if (token.type == TOKEN_NUMBER) {
         v->type = VAL_NUMBER;
@@ -99,7 +99,7 @@ void print_ast(Expr *expr) {
                 printf("%s", expr->as.literal.value->as.string);
             }
         } else if (expr->type == BINARY) {
-            printf("(%.*s ", expr->as.binary.binary_op.length, expr->as.binary.binary_op.start);
+            printf("(%.*s ", expr->as.binary.operator.length, expr->as.binary.operator.start);
             print_ast(expr->as.binary.left);
             printf(" ");
             print_ast(expr->as.binary.right);
@@ -109,7 +109,7 @@ void print_ast(Expr *expr) {
             print_ast(expr->as.grouping.expression);
             printf(")");
         } else if (expr->type == UNARY) {
-            printf("(%.*s ", expr->as.unary.unary_op.length, expr->as.unary.unary_op.start);
+            printf("(%.*s ", expr->as.unary.operator.length, expr->as.unary.operator.start);
             print_ast(expr->as.unary.right);
             printf(")");
         }

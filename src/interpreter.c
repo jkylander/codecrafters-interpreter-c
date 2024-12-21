@@ -16,17 +16,17 @@
 #define IS_NIL(value) ((value).type == VAL_NIL)
 #define IS_NUMBER(value) ((value).type == VAL_NUMBER)
 
-Value visit_literal(Expr *expr);
-Value visit_grouping(Expr *expr);
-Value visit_binary(Expr *expr);
-Value visit_unary(Expr *expr);
-Value evaluate(Expr *expr);
-void print_value(Value *value);
+Object visit_literal(Expr *expr);
+Object visit_grouping(Expr *expr);
+Object visit_binary(Expr *expr);
+Object visit_unary(Expr *expr);
+Object evaluate(Expr *expr);
+void print_value(Object *value);
 
-Value visit_literal(Expr *expr) {
+Object visit_literal(Expr *expr) {
     return *expr->as.literal.value;
 }
-Value visit_grouping(Expr *expr) {
+Object visit_grouping(Expr *expr) {
     return evaluate(expr->as.grouping.expression);
 }
 
@@ -35,14 +35,14 @@ void runtime_error(const char *message, int line) {
     exit(70);
 }
 
-Value visit_binary(Expr *expr) {
-    TokenType operatorType = expr->as.binary.binary_op.type;
-    Value right = evaluate(expr->as.binary.right);
-    Value left = evaluate(expr->as.binary.left);
+Object visit_binary(Expr *expr) {
+    TokenType operatorType = expr->as.binary.operator.type;
+    Object right = evaluate(expr->as.binary.right);
+    Object left = evaluate(expr->as.binary.left);
 
     // Arithmetic
     if (left.type == VAL_NUMBER && right.type == VAL_NUMBER) {
-        Value result = {.type = VAL_NUMBER};
+        Object result = {.type = VAL_NUMBER};
         switch(operatorType) {
             case TOKEN_PLUS:
                 result.as.number = left.as.number + right.as.number;
@@ -89,14 +89,14 @@ Value visit_binary(Expr *expr) {
                     break;
             }
         }
-        Value result = {.type = VAL_BOOL};
+        Object result = {.type = VAL_BOOL};
         result.as.boolean = operatorType == TOKEN_EQUAL_EQUAL ? is_equal : !is_equal;
         return result;
     }
 
     // Number Comparison
     if (left.type == VAL_NUMBER && right.type == VAL_NUMBER) {
-        Value result = {.type = VAL_BOOL };
+        Object result = {.type = VAL_BOOL };
         switch(operatorType) {
             case TOKEN_GREATER:
                 result.as.boolean= left.as.number > right.as.number;
@@ -122,7 +122,7 @@ Value visit_binary(Expr *expr) {
     if (left.type == VAL_STRING && right.type == VAL_STRING) {
         switch(operatorType) {
             case TOKEN_PLUS: {
-                Value result = {.type = VAL_STRING};
+                Object result = {.type = VAL_STRING};
                 size_t left_len = strlen(left.as.string);
                 size_t right_len = strlen(right.as.string);
                 result.as.string = malloc(left_len + right_len + 1);
@@ -142,11 +142,11 @@ Value visit_binary(Expr *expr) {
     }
 
     runtime_error("Operands must be two numbers or two strings.", expr->line);
-    return (Value){.type = VAL_NIL};
+    return (Object){.type = VAL_NIL};
 
 }
 
-bool is_truthy(Value value) {
+bool is_truthy(Object value) {
     switch(value.type) {
         case VAL_NIL:
             return false;
@@ -161,29 +161,29 @@ bool is_truthy(Value value) {
     }
 }
 
-Value visit_unary(Expr *expr) {
-    Value operand = evaluate(expr->as.unary.right);
-    switch(expr->as.unary.unary_op.type) {
+Object visit_unary(Expr *expr) {
+    Object operand = evaluate(expr->as.unary.right);
+    switch(expr->as.unary.operator.type) {
         case TOKEN_MINUS:
             if (operand.type == VAL_NUMBER) {
-                Value result = {.type = VAL_NUMBER, .as.number = -operand.as.number};
+                Object result = {.type = VAL_NUMBER, .as.number = -operand.as.number};
                 return result;
             } else {
                 runtime_error("Operand must be a number.", expr->line);
             }
             break;
         case TOKEN_BANG:
-            Value result = {.type = VAL_BOOL, .as.boolean = !is_truthy(operand)};
+            Object result = {.type = VAL_BOOL, .as.boolean = !is_truthy(operand)};
             return result;
         default: 
             break;
     }
-    return (Value){.type = VAL_NIL};
+    return (Object){.type = VAL_NIL};
 }
 
-Value evaluate(Expr *expr) {
+Object evaluate(Expr *expr) {
     if (!expr) {
-        Value nil_value = {.type = VAL_NIL };
+        Object nil_value = {.type = VAL_NIL };
         return nil_value;
     }
     switch (expr->type) {
@@ -201,7 +201,7 @@ Value evaluate(Expr *expr) {
     }
 }
 
-void print_value(Value *value) {
+void print_value(Object *value) {
     switch(value->type) {
         case VAL_BOOL:
             printf("%s\n", value->as.boolean == 1 ? "true" : "false");

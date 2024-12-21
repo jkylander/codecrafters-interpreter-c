@@ -2,11 +2,11 @@
 #define INTERPRETER_H
 #include "ast.h"
 
-Value visit_literal(Expr *expr);
-Value visit_grouping(Expr *expr);
-Value visit_binary(Expr *expr);
-Value visit_unary(Expr *expr);
-Value evaluate(Expr *expr);
-void print_value(Value *value);
+Object visit_literal(Expr *expr);
+Object visit_grouping(Expr *expr);
+Object visit_binary(Expr *expr);
+Object visit_unary(Expr *expr);
+Object evaluate(Expr *expr);
+void print_value(Object *value);
 
 #endif /* INTERPRETER_H */

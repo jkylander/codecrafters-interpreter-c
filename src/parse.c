@@ -60,7 +60,7 @@ Expr *p_unary(Parser *parser) {
         Expr *r = malloc(sizeof(Expr));
         r->type = UNARY;
         r->as.unary.right = right;
-        r->as.unary.unary_op = *operator;
+        r->as.unary.operator = *operator;
         r->line = right->line;
         return r;
     }
