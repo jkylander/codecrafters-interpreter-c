@@ -40,7 +40,7 @@ Value visit_binary(Expr *expr) {
     Value right = evaluate(expr->as.binary.right);
     Value left = evaluate(expr->as.binary.left);
 
-    // Number operations
+    // Arithmetic
     if (left.type == VAL_NUMBER && right.type == VAL_NUMBER) {
         Value result = {.type = VAL_NUMBER};
         switch(operatorType) {
@@ -62,11 +62,39 @@ Value visit_binary(Expr *expr) {
                 }
                 result.as.number = left.as.number / right.as.number;
                 return result;
-
             default: break;
         }
     }
-    // Comparison operations
+
+    // Comparison
+    if (operatorType == TOKEN_EQUAL_EQUAL || operatorType == TOKEN_BANG_EQUAL) {
+        bool is_equal;
+        if (left.type != right.type) is_equal = false;
+        else {
+            switch(left.type) {
+                case VAL_NUMBER:
+                    is_equal = left.as.number == right.as.number;
+                    break;
+                case VAL_BOOL:
+                    is_equal = left.as.boolean == right.as.boolean;
+                    break;
+                case VAL_STRING:
+                    is_equal = strcmp(left.as.string, right.as.string) == 0;
+                    break;
+                case VAL_NIL:
+                    is_equal = true; // nil == nil
+                    break;
+                default:
+                    is_equal = false;
+                    break;
+            }
+        }
+        Value result = {.type = VAL_BOOL};
+        result.as.boolean = operatorType == TOKEN_EQUAL_EQUAL ? is_equal : !is_equal;
+        return result;
+    }
+
+    // Number Comparison
     if (left.type == VAL_NUMBER && right.type == VAL_NUMBER) {
         Value result = {.type = VAL_BOOL };
         switch(operatorType) {
@@ -86,14 +114,6 @@ Value visit_binary(Expr *expr) {
                 result.as.boolean = left.as.number <= right.as.number;
                 return result;
 
-            case TOKEN_EQUAL_EQUAL:
-                result.as.boolean = left.as.number == right.as.number;
-                return result;
-
-            case TOKEN_BANG_EQUAL:
-                result.as.boolean = left.as.number != right.as.number;
-                return result;
-
             default: break;
         }
     }
@@ -110,29 +130,20 @@ Value visit_binary(Expr *expr) {
                 strcat(result.as.string, right.as.string);
                 return result;
             }
-            case TOKEN_EQUAL_EQUAL: {
-                Value result = {
-                    .type = VAL_BOOL,
-                    .as.boolean = strcmp(left.as.string, right.as.string) == 0};
-                return result;
-            }
-
-            case TOKEN_BANG_EQUAL: {
-                Value result = {
-                    .type = VAL_BOOL,
-                    .as.boolean = strcmp(left.as.string, right.as.string) != 0};
-                return result;
-            }
-
             default: break;
         }
     }
 
-    // Wrong comparisons
-    if (left.type == VAL_STRING && right.type == VAL_NUMBER) return (Value){.type = VAL_BOOL, .as.boolean = false};
-    if (left.type == VAL_NUMBER && right.type == VAL_STRING) return (Value){.type = VAL_BOOL, .as.boolean = false};
+    // String/number comparisons
+    if (left.type == VAL_STRING && right.type == VAL_NUMBER ||
+        left.type == VAL_NUMBER && right.type == VAL_STRING ) {
+        runtime_error("Operands must be numbers.", expr->line);
 
-    return (Value) {.type = VAL_NIL};
+    }
+
+    runtime_error("Operands must be two numbers or two strings.", expr->line);
+    return (Value){.type = VAL_NIL};
+
 }
 
 bool is_truthy(Value value) {
