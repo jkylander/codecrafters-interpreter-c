@@ -43,6 +43,7 @@ Expr *create_literal_expr(Token token) {
     }
 
     expr->as.literal.value = v;
+    expr->line = token.line;
     return expr;
 }
 
@@ -50,6 +51,7 @@ Expr *create_grouping_expr(Expr *expression) {
     Expr *expr = malloc(sizeof(Expr));
     expr->type = GROUPING;
     expr->as.grouping.expression = expression;
+    expr->line = expression->line;
     return expr;
 }
 

@@ -30,6 +30,11 @@ Value visit_grouping(Expr *expr) {
     return evaluate(expr->as.grouping.expression);
 }
 
+void runtime_error(const char *message, int line) {
+    fprintf(stderr, "Runtime error: %s\n[line %d]\n", message, line);
+    exit(70);
+}
+
 Value visit_binary(Expr *expr) {
     TokenType operatorType = expr->as.binary.binary_op.type;
     Value right = evaluate(expr->as.binary.right);
@@ -53,8 +58,7 @@ Value visit_binary(Expr *expr) {
 
             case TOKEN_SLASH:
                 if (right.as.number == 0) {
-                    fprintf(stderr, "Division by zero");
-                    exit(65);
+                    runtime_error("Division by zero.", expr->line);
                 }
                 result.as.number = left.as.number / right.as.number;
                 return result;
@@ -153,6 +157,8 @@ Value visit_unary(Expr *expr) {
             if (operand.type == VAL_NUMBER) {
                 Value result = {.type = VAL_NUMBER, .as.number = -operand.as.number};
                 return result;
+            } else {
+                runtime_error("Operand must be a number.", expr->line);
             }
             break;
         case TOKEN_BANG:

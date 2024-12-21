@@ -61,6 +61,7 @@ Expr *p_unary(Parser *parser) {
         r->type = UNARY;
         r->as.unary.right = right;
         r->as.unary.unary_op = *operator;
+        r->line = right->line;
         return r;
     }
     return p_primary(parser);
