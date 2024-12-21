@@ -1,7 +1,7 @@
 #include "interpreter.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "ast.h"
+#include <string.h>
 #include "scanner.h"
 
 #define AS_BOOL(value) ((value).as.boolean)
@@ -37,7 +37,7 @@ Value visit_binary(Expr *expr) {
     // Number operations
     if (left.type == VAL_NUMBER && right.type == VAL_NUMBER) {
         Value result = {.type = VAL_NUMBER};
-        switch(expr->as.binary.binary_op.type) {
+        switch(operatorType) {
             case TOKEN_PLUS:
                 result.as.number = left.as.number + right.as.number;
                 return result;
@@ -64,7 +64,7 @@ Value visit_binary(Expr *expr) {
     // Comparison operations
     if (left.type == VAL_NUMBER && right.type == VAL_NUMBER) {
         Value result = {.type = VAL_BOOL };
-        switch(expr->as.binary.binary_op.type) {
+        switch(operatorType) {
             case TOKEN_GREATER:
                 result.as.boolean= left.as.number > right.as.number;
                 return result;
@@ -89,6 +89,22 @@ Value visit_binary(Expr *expr) {
                 result.as.boolean = left.as.number != right.as.number;
                 return result;
 
+            default: break;
+        }
+    }
+
+    // String concatenation
+    if (left.type == VAL_STRING && right.type == VAL_STRING) {
+        Value result = {.type = VAL_STRING};
+        switch(operatorType) {
+            case TOKEN_PLUS: {
+                size_t left_len = strlen(left.as.string);
+                size_t right_len = strlen(right.as.string);
+                result.as.string = malloc(left_len + right_len + 1);
+                strcpy(result.as.string, left.as.string);
+                strcat(result.as.string, right.as.string);
+                return result;
+            }
             default: break;
         }
     }
