@@ -1,6 +1,7 @@
 #include "ast.h"
 #include "scanner.h"
 #include "parse.h"
+#include "stmt.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -186,7 +187,58 @@ Expr *p_term(Parser *parser) {
     return expr;
 }
 
-Expr *parse (Parser *parser) {
-    Expr *p = parse_expression(parser);
-    return p ? p : NULL;
+StmtArray create_statement_array(int inital_capacity) {
+    StmtArray array = {
+        .statements = malloc(inital_capacity * sizeof(Stmt)),
+        .count = 0,
+        .capacity = inital_capacity,
+        .hadError = false,
+    };
+    return array;
+}
+
+void statement_array_add(StmtArray *array, Stmt stmt) {
+    if (array->count == array->capacity) {
+        array->capacity *= 2;
+        array->statements = realloc(array->statements, array->capacity * sizeof(Stmt));
+    }
+    array->statements[array->count++] = stmt;
+}
+
+void free_statement_array(StmtArray *array) {
+    free(array->statements);
+    array->statements = NULL;
+    array->count = array->capacity = 0;
+}
+
+Stmt printStatement(Parser *parser) {
+    Expr *value = parse_expression(parser);
+    consume(parser, TOKEN_SEMICOLON, "Expect ; after value.");
+    return (Stmt) {
+        .type = STMT_PRINT,
+        .as.print.expression = value,
+    };
+}
+
+Stmt expressionStatement(Parser *parser) {
+    Expr *expr = parse_expression(parser);
+    consume(parser, TOKEN_SEMICOLON, "Expect ; after expression.");
+    return (Stmt) {
+        .type = STMT_EXPR,
+        .as.expr.expression = expr,
+    };
+}
+
+Stmt statement(Parser *parser) {
+    if (p_match(parser, TOKEN_PRINT)) return printStatement(parser);
+
+    return expressionStatement(parser);
+}
+
+StmtArray parse (Parser *parser) {
+    StmtArray statement_array = create_statement_array(15);
+    while (!p_isAtEnd(parser)) {
+        statement_array_add(&statement_array, statement(parser));
+    }
+    return statement_array;
 }

@@ -3,7 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ast.h"
+#include "parse.h"
 #include "scanner.h"
+#include "stmt.h"
 
 #define AS_BOOL(value) ((value).as.boolean)
 #define AS_NUMBER(value) ((value).as.number)
@@ -21,7 +23,7 @@ Object visit_grouping(Expr *expr);
 Object visit_binary(Expr *expr);
 Object visit_unary(Expr *expr);
 Object evaluate(Expr *expr);
-void print_value(Object *value);
+void print_object(Object *value);
 
 Object visit_literal(Expr *expr) {
     return *expr->as.literal.value;
@@ -201,22 +203,36 @@ Object evaluate(Expr *expr) {
     }
 }
 
-void print_value(Object *value) {
-    switch(value->type) {
+void print_object(Object *object) {
+    switch(object->type) {
         case VAL_BOOL:
-            printf("%s\n", value->as.boolean == 1 ? "true" : "false");
+            printf("%s\n", object->as.boolean == 1 ? "true" : "false");
             break;
         case VAL_NIL:
             printf("nil\n");
             break;
         case VAL_STRING:
-            printf("%s\n", value->as.string);
+            printf("%s\n", object->as.string);
             break;
         case VAL_NUMBER:
-            if (value->as.number == (int)value->as.number)
-                printf("%d\n", (int)value->as.number);
-            else printf("%g\n", value->as.number);
+            if (object->as.number == (int)object->as.number)
+                printf("%d\n", (int)object->as.number);
+            else printf("%g\n", object->as.number);
         default: break;
+    }
+}
+
+void print_statement(Stmt stmt) {
+    if (stmt.type == STMT_PRINT) {
+        ExprType type = stmt.as.print.expression->type;
+        Object obj = evaluate(stmt.as.print.expression);
+        print_object(&obj);
+    }
+}
+
+void print_statements(StmtArray *array) {
+    for (int i = 0; i < array->count; i++) {
+        print_statement(array->statements[i]);
     }
 }
 

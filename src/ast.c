@@ -7,9 +7,20 @@ struct string_pair_type {
     ExprType type;
     const char *str;
 } known_types[] = {
-    {LITERAL, "LITERAL"}, {UNARY, "UNARY"},
-    {BINARY, "BINARY"}, {GROUPING, "GROUPING"},
+    {ASSIGN, "ASSIGN"},
+    {BINARY, "BINARY"},
+    {CALL, "CALL"},
+    {GET, "GET"},
+    {GROUPING, "GROUPING"},
+    {LITERAL, "LITERAL"},
+    {LOGICAL, "LOGICAL"},
+    {SET, "SET"},
+    {SUPER, "SUPER"},
+    {THIS, "THIS"},
+    {UNARY, "UNARY"},
+    {VARIABLE, "VARIABLE"},
 };
+
 Expr *create_binary_expr(Token binary_op, Expr *left, Expr *right) {
     Expr *expr = malloc(sizeof(Expr));
     expr->type = BINARY;

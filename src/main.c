@@ -6,6 +6,7 @@
 #include "parse.h"
 #include "scanner.h"
 #include "interpreter.h"
+#include "stmt.h"
 
 const char *read_file(const char *filename);
 int main(int argc, char *argv[]) {
@@ -31,7 +32,7 @@ int main(int argc, char *argv[]) {
         if (!error) {
             Parser parser = create_parser(&tokens);
             if (parser.hadError) error = true;
-            Expr ast = *parse(&parser);
+            Expr ast = *parse_expression(&parser);
             print_ast(&ast);
             printf("\n");
             free_token_array(&tokens);
@@ -40,17 +41,16 @@ int main(int argc, char *argv[]) {
         if (tokens.hadError == true) error = true;
         Parser parser = create_parser(&tokens);
         if (parser.hadError) error = true;
-        Expr ast = *parse(&parser);
-        Object value = evaluate(&ast);
-        print_value(&value);
+        Expr ast = *parse_expression(&parser);
+        Object object = evaluate(&ast);
+        print_object(&object);
 
     } else if (strcmp(command, "run") == 0) {
         if (tokens.hadError == true) error = true;
         Parser parser = create_parser(&tokens);
         if (parser.hadError) error = true;
-        Expr ast = *parse(&parser);
-        Object value = evaluate(&ast);
-        print_value(&value);
+        StmtArray statements = parse(&parser);
+        print_statements(&statements);
 
     } else {
         fprintf(stderr, "Unknown command: %s\n", command);
