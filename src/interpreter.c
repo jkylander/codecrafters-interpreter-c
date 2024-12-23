@@ -223,10 +223,15 @@ void print_object(Object *object) {
 }
 
 void print_statement(Stmt stmt) {
-    if (stmt.type == STMT_PRINT) {
-        ExprType type = stmt.as.print.expression->type;
-        Object obj = evaluate(stmt.as.print.expression);
-        print_object(&obj);
+    switch (stmt.type) {
+        case STMT_PRINT: {
+            Object obj = evaluate(stmt.as.print.expression);
+            print_object(&obj);
+            } break;
+        case STMT_EXPR: {
+            Object obj = evaluate(stmt.as.expr.expression);
+            } break;
+        default: break;
     }
 }
 
