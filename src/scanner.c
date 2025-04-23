@@ -40,7 +40,7 @@ void print_token(Token token) {
         printf("%s %.*s null\n", str_from_token(token.type), token.length, token.start);
     } else if (token.type == TOKEN_ERROR) {
         fprintf(stderr, "[line %d] Error: %.*s\n", token.line, token.length, token.start);
-
+        free((char*)token.start);
     }
     else {
         printf("%s %.*s null\n", str_from_token(token.type), token.length, token.start);
@@ -246,5 +246,7 @@ Token scanToken() {
         default: break;
     }
 
-    return errorToken("Unexpected character.");
+    char *error = malloc(25);
+    sprintf(error, "Unexpected character: %c", c);
+    return errorToken(error);
 }
