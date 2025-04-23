@@ -28,7 +28,7 @@ static const char *str_from_token(TokenType type) {
 
 void print_token(Token token) {
     if (token.type == TOKEN_STRING) {
-        printf("%s \"%.*s\" %.*s\n", str_from_token(token.type), token.length, token.start, token.length, token.start);
+        printf("%s %.*s %.*s\n", str_from_token(token.type), token.length, token.start, token.length - 2, token.start + 1);
     } else if (token.type == TOKEN_NUMBER) {
         double value = strtod(token.start, NULL);
         if (value == (int) value) {
