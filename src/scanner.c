@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+#include <float.h>
 
 #include "scanner.h"
 
@@ -25,16 +27,29 @@ static const char *str_from_token(TokenType type) {
     return token_strings[type].str;
 }
 
+static int count_decimals(double val) {
+    int result = 0;
+    double epsilon = DBL_EPSILON;
+    double exponent = 1.0;
+
+    while (fabs(fmod(val * exponent, 1.0)) > epsilon) {
+        ++result;
+        epsilon *= 10;
+        exponent *= 10;
+    }
+    return result;
+}
 
 void print_token(Token token) {
     if (token.type == TOKEN_STRING) {
         printf("%s %.*s %.*s\n", str_from_token(token.type), token.length, token.start, token.length - 2, token.start + 1);
     } else if (token.type == TOKEN_NUMBER) {
         double value = strtod(token.start, NULL);
+
         if (value == (int) value) {
             printf("%s %.*s %.1f\n", str_from_token(token.type), token.length, token.start, value);
         } else {
-            printf("%s %.*s %g\n", str_from_token(token.type), token.length, token.start, value);
+            printf("%s %.*s %.*f\n", str_from_token(token.type), token.length, token.start, count_decimals(value), value);
         }
     } else if (token.type >= TOKEN_AND && token.type <= TOKEN_WHILE) {
         printf("%s %.*s null\n", str_from_token(token.type), token.length, token.start);
