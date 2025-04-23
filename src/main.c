@@ -1,14 +1,28 @@
 #define _POSIX_C_SOURCE 200809L
+#include "chunk.h"
+#include "debug.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 char *read_file_contents(const char *filename);
 
+void testChunk() {
+    Chunk chunk;
+    initChunk(&chunk);
+    int constant = addConstant(&chunk, 1.2);
+    writeChunk(&chunk, OP_CONSTANT, 123);
+    writeChunk(&chunk, constant, 123);
+    writeChunk(&chunk, OP_RETURN, 123);
+    disassembleChunk(&chunk, "test chunk");
+    freeChunk(&chunk);
+}
+
 int main(int argc, char *argv[]) {
     // Disable output buffering
     setbuf(stdout, NULL);
     setbuf(stderr, NULL);
+    testChunk();
 
     if (argc < 3) {
         fprintf(stderr, "Usage: ./your_program tokenize <filename>\n");
@@ -18,9 +32,6 @@ int main(int argc, char *argv[]) {
     const char *command = argv[1];
 
     if (strcmp(command, "tokenize") == 0) {
-        // You can use print statements as follows for debugging, they'll be visible when running tests.
-        fprintf(stderr, "Logs from your program will appear here!\n");
-
         char *file_contents = read_file_contents(argv[2]);
 
         // Uncomment this block to pass the first stage
@@ -28,7 +39,6 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Scanner not implemented\n");
             exit(1);
         }
-        printf("EOF  null\n"); // Placeholder, remove this line when implementing the scanner
 
         free(file_contents);
     } else {
