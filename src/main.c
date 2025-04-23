@@ -66,8 +66,6 @@ char *read_file_contents(const char *filename) {
         fclose(file);
     }
     fflush(out);
-    if (buflen == 0 || buf[buflen -1] != '\n')
-        fputc('\n', out);
     fputc('\0', out);
     fclose(out);
 
