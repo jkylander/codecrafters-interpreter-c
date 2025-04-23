@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,16 +20,16 @@ int main(int argc, char *argv[]) {
     if (strcmp(command, "tokenize") == 0) {
         // You can use print statements as follows for debugging, they'll be visible when running tests.
         fprintf(stderr, "Logs from your program will appear here!\n");
-        
+
         char *file_contents = read_file_contents(argv[2]);
 
         // Uncomment this block to pass the first stage
-        // if (strlen(file_contents) > 0) {
-        //     fprintf(stderr, "Scanner not implemented\n");
-        //     exit(1);
-        // } 
-        // printf("EOF  null\n"); // Placeholder, remove this line when implementing the scanner
-        
+        if (strlen(file_contents) > 0) {
+            fprintf(stderr, "Scanner not implemented\n");
+            exit(1);
+        }
+        printf("EOF  null\n"); // Placeholder, remove this line when implementing the scanner
+
         free(file_contents);
     } else {
         fprintf(stderr, "Unknown command: %s\n", command);
@@ -39,33 +40,36 @@ int main(int argc, char *argv[]) {
 }
 
 char *read_file_contents(const char *filename) {
-    FILE *file = fopen(filename, "r");
-    if (file == NULL) {
-        fprintf(stderr, "Error reading file: %s\n", filename);
-        return NULL;
+    FILE *file;
+    if (strcmp(filename, "-") == 0) {
+        file = stdin;
+    } else {
+        file = fopen(filename, "rb");
+        if (file == nullptr) {
+            fprintf(stderr, "Could not open file: %s\n", filename);
+            exit(EXIT_FAILURE);
+        }
+    }
+    char *buf;
+    size_t buflen;
+    FILE *out = open_memstream(&buf, &buflen);
+    for (;;) {
+        char buf2[4096];
+        size_t n = fread(buf2, 1, sizeof(buf2), file);
+        if (n == 0) {
+            break;
+        }
+        fwrite(buf2, 1, n, out);
     }
 
-    fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
-    rewind(file);
-
-    char *file_contents = malloc(file_size + 1);
-    if (file_contents == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
+    if (file != stdin) {
         fclose(file);
-        return NULL;
     }
+    fflush(out);
+    if (buflen == 0 || buf[buflen -1] != '\n')
+        fputc('\n', out);
+    fputc('\0', out);
+    fclose(out);
 
-    size_t bytes_read = fread(file_contents, 1, file_size, file);
-    if (bytes_read < file_size) {
-        fprintf(stderr, "Error reading file contents\n");
-        free(file_contents);
-        fclose(file);
-        return NULL;
-    }
-
-    file_contents[file_size] = '\0';
-    fclose(file);
-
-    return file_contents;
+    return buf;
 }
