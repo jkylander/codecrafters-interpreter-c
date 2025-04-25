@@ -33,7 +33,11 @@ int main(int argc, char *argv[]) {
         bool hadError = lex(source);
         free(source);
         return hadError ? 65 : 0;
-    } else if (strcmp(command, "interprest") == 0) {
+    } else if (strcmp(command, "parse") == 0) {
+        char *source = read_file_contents(argv[2]);
+        Ast ast = parse(source);
+
+    } else if (strcmp(command, "evaluate") == 0) {
         runFile(argv[2]);
 
     } else {
