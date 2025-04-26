@@ -160,6 +160,7 @@ void free_expr(Expr *expr) {
 }
 
 void print_ast(Expr *expr) {
+    if (parser.panicMode) return;
     if (expr != NULL) {
         if (expr->type == EX_LITERAL) {
             if (expr->as.literal.value->type == VAL_STRING) {
@@ -417,6 +418,7 @@ static Expr *primary() {
 
     if (match(TOKEN_LEFT_PAREN)) {
         Expr *expr = parse_expression();
+        if (expr == nullptr) return nullptr;
         consume(TOKEN_RIGHT_PAREN, "Expect ') after expression");
         return create_grouping_expr(expr);
     }
@@ -429,6 +431,7 @@ static Expr *exp_unary() {
     if (match(TOKEN_BANG) || match(TOKEN_MINUS)) {
         Token operator = parser.previous;
         Expr *right = exp_unary();
+        if (right == nullptr) return nullptr;
         Expr *r = malloc(sizeof(Expr));
         r->type = EX_UNARY;
         r->as.unary.right = right;
@@ -442,6 +445,7 @@ static Expr *exp_unary() {
 
 static Expr *factor() {
     Expr *expr = exp_unary();
+    if (expr == nullptr) return nullptr;
     while (match(TOKEN_SLASH) || match(TOKEN_STAR)) {
         Token operator = parser.previous;
         Expr *right = exp_unary();
@@ -452,6 +456,7 @@ static Expr *factor() {
 
 static Expr *term() {
     Expr *expr = factor();
+    if (expr == nullptr) return nullptr;
     while (match(TOKEN_MINUS) || match(TOKEN_PLUS)) {
         Token operator = parser.previous;
         Expr *right = factor();
@@ -462,6 +467,7 @@ static Expr *term() {
 
 static Expr *comparison() {
     Expr *expr = term();
+    if (expr == nullptr) return nullptr;
     while (match(TOKEN_GREATER) ||
            match(TOKEN_GREATER_EQUAL) ||
            match(TOKEN_LESS) || match(TOKEN_LESS_EQUAL)) {
@@ -474,6 +480,7 @@ static Expr *comparison() {
 
 static Expr *equality() {
     Expr *expr = comparison();
+    if (expr == nullptr) return nullptr;
     while (match(TOKEN_BANG_EQUAL) || match(TOKEN_EQUAL_EQUAL)) {
         Token op = parser.previous;
         Expr *right = comparison();
@@ -488,6 +495,10 @@ Expr *parse(const char *source) {
     parser.panicMode = false;
     advance();
     return equality();
+}
+
+bool hadError() {
+    return parser.hadError;
 }
 
 bool compile(const char *source, Chunk *chunk) {

@@ -37,6 +37,9 @@ int main(int argc, char *argv[]) {
     } else if (strcmp(command, "parse") == 0) {
         char *source = read_file_contents(argv[2]);
         Expr *ast = parse(source);
+        if (hadError()) {
+            return 65;
+        }
         print_ast(ast);
         printf("\n");
 
