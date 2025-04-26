@@ -27,17 +27,19 @@ static const char *str_from_token(TokenType type) {
     return token_strings[type].str;
 }
 
-static int count_decimals(double val) {
-    int result = 0;
-    double epsilon = DBL_EPSILON;
-    double exponent = 1.0;
+int count_decimals(double number) {
+    char val[50] = {};
+    snprintf(val, sizeof(val), "%f", number);
+    int count = 0;
+    bool decimal = false;
+    char *cur = val;
 
-    while (fabs(fmod(val * exponent, 1.0)) > epsilon) {
-        ++result;
-        epsilon *= 10;
-        exponent *= 10;
+    for (; *cur != '\0'; cur++) {
+        if (decimal) count++;
+        if (*cur == '.') decimal = true;
     }
-    return result;
+    while (*(--cur) == '0') count--;
+    return count;
 }
 
 void print_token(Token token) {

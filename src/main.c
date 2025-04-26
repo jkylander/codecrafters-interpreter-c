@@ -1,5 +1,5 @@
-#include "compiler.h"
 #define _POSIX_C_SOURCE 200809L
+#include "compiler.h"
 #include "scanner.h"
 #include "vm.h"
 #include <stdio.h>
@@ -79,8 +79,8 @@ char *read_file_contents(const char *filename) {
         fclose(file);
     }
     fflush(out);
-    fputc('\0', out);
     fclose(out);
+    buf[buflen - 1] = '\0';
 
     return buf;
 }

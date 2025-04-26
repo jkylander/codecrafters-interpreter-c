@@ -176,7 +176,7 @@ void print_ast(Expr *expr) {
                 if (value == (int) value) {
                     printf("%.1f", value);
                 } else {
-                    printf("%g", value);
+                    printf("%.*f", count_decimals(value), value);
                 }
             } else {
                 printf("%s", expr->as.literal.value->as.string);

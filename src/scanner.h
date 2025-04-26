@@ -58,6 +58,7 @@ typedef struct {
 } Token;
 
 void initScanner(const char *source);
+int count_decimals(double number);
 Token scanToken();
 bool lex(const char *source);
 
