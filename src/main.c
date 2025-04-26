@@ -80,7 +80,7 @@ char *read_file_contents(const char *filename) {
     }
     fflush(out);
     fclose(out);
-    buf[buflen - 1] = '\0';
+    buf[buflen] = '\0';
 
     return buf;
 }
