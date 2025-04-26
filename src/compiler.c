@@ -125,9 +125,9 @@ static Expr *create_literal_expr(Token token) {
         v->as.boolean = token.type == TOKEN_TRUE;
     } else {
         v->type = VAL_STRING;
-        char *str = malloc(token.length + 1);
-        strncpy(str, token.start, token.length);
-        str[token.length] = '\0';
+        char *str = malloc(token.length - 1);
+        strncpy(str, token.start + 1, token.length - 1);
+        str[token.length - 2] = '\0';
         v->as.string = str;
     }
 
