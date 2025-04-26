@@ -1,6 +1,7 @@
 #include "compiler.h"
 #include "chunk.h"
 #include "scanner.h"
+#include "value.h"
 #include <string.h>
 #ifdef DEBUG_PRINT_CODE
 #include "debug.h"
@@ -59,22 +60,6 @@ typedef enum {
     EX_EXPR_COUNT
 } ExprType;
 
-typedef enum {
-    VAL_BOOL,
-    VAL_NIL,
-    VAL_NUMBER,
-    VAL_STRING,
-} ObjectType;
-
-typedef struct {
-    ObjectType type;
-    union {
-        bool boolean;
-        Value number;
-        char *string;
-    } as;
-} Object;
-
 typedef struct Expr Expr;
 
 struct Expr {
@@ -90,7 +75,7 @@ struct Expr {
             Expr *expression;
         } grouping;
         struct {
-            Object *value;
+            Value *value;
         } literal;
         struct {
             Token operator;
@@ -112,7 +97,7 @@ static Expr *create_binary_expr(Token binary_op, Expr *left, Expr *right) {
 static Expr *create_literal_expr(Token token) {
     Expr *expr = malloc(sizeof(Expr));
     expr->type = EX_LITERAL;
-    Object *v = malloc(sizeof(Object));
+    Value *v = malloc(sizeof(Value));
 
     if (token.type == TOKEN_NUMBER) {
         v->type = VAL_NUMBER;
@@ -160,7 +145,8 @@ void free_expr(Expr *expr) {
 }
 
 void print_ast(Expr *expr) {
-    if (parser.panicMode) return;
+    if (parser.panicMode)
+        return;
     if (expr != NULL) {
         if (expr->type == EX_LITERAL) {
             if (expr->as.literal.value->type == VAL_STRING) {
@@ -299,6 +285,15 @@ static void binary() {
     }
 }
 
+static void literal() {
+    switch (parser.previous.type) {
+        case TOKEN_FALSE: emitByte(OP_FALSE); break;
+        case TOKEN_TRUE: emitByte(OP_TRUE); break;
+        case TOKEN_NIL: emitByte(OP_NIL); break;
+        default: return;
+    }
+}
+
 static void expression() { parsePrecedence(PREC_ASSIGNMENT); }
 
 static void grouping() {
@@ -308,7 +303,7 @@ static void grouping() {
 
 static void number() {
     double value = strtod(parser.previous.start, NULL);
-    emitConstant(value);
+    emitConstant(NUMBER_VAL(value));
 }
 
 static void unary() {
@@ -349,17 +344,17 @@ ParseRule rules[] = {
   [TOKEN_AND]           = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_CLASS]         = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_ELSE]          = {nullptr,     nullptr,   PREC_NONE},
-  [TOKEN_FALSE]         = {nullptr,     nullptr,   PREC_NONE},
+  [TOKEN_FALSE]         = {literal,     nullptr,   PREC_NONE},
   [TOKEN_FOR]           = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_FUN]           = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_IF]            = {nullptr,     nullptr,   PREC_NONE},
-  [TOKEN_NIL]           = {nullptr,     nullptr,   PREC_NONE},
+  [TOKEN_NIL]           = {literal,     nullptr,   PREC_NONE},
   [TOKEN_OR]            = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_PRINT]         = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_RETURN]        = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_SUPER]         = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_THIS]          = {nullptr,     nullptr,   PREC_NONE},
-  [TOKEN_TRUE]          = {nullptr,     nullptr,   PREC_NONE},
+  [TOKEN_TRUE]          = {literal,     nullptr,   PREC_NONE},
   [TOKEN_VAR]           = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_WHILE]         = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_ERROR]         = {nullptr,     nullptr,   PREC_NONE},
@@ -386,7 +381,6 @@ static void parsePrecedence(Precedence precedence) {
 
 static ParseRule *getRule(TokenType type) { return &rules[type]; }
 
-
 static bool match(TokenType type) {
     if (parser.current.type == type) {
         advance();
@@ -396,9 +390,7 @@ static bool match(TokenType type) {
 }
 
 static Expr *equality();
-Expr *parse_expression() {
-    return equality();
-}
+Expr *parse_expression() { return equality(); }
 
 static Expr *primary() {
     Token current = parser.current;
@@ -407,18 +399,17 @@ static Expr *primary() {
         return nullptr;
     }
 
-    if (match(TOKEN_TRUE) || match(TOKEN_FALSE) ||
-        match(TOKEN_NIL)) {
+    if (match(TOKEN_TRUE) || match(TOKEN_FALSE) || match(TOKEN_NIL)) {
         return create_literal_expr(parser.previous);
     }
-    if (match(TOKEN_NUMBER) ||
-        match(TOKEN_STRING)) {
+    if (match(TOKEN_NUMBER) || match(TOKEN_STRING)) {
         return create_literal_expr(parser.previous);
     }
 
     if (match(TOKEN_LEFT_PAREN)) {
         Expr *expr = parse_expression();
-        if (expr == nullptr) return nullptr;
+        if (expr == nullptr)
+            return nullptr;
         consume(TOKEN_RIGHT_PAREN, "Expect ') after expression");
         return create_grouping_expr(expr);
     }
@@ -426,28 +417,28 @@ static Expr *primary() {
     return nullptr;
 }
 
-
 static Expr *exp_unary() {
     if (match(TOKEN_BANG) || match(TOKEN_MINUS)) {
-        Token operator = parser.previous;
+        Token operator= parser.previous;
         Expr *right = exp_unary();
-        if (right == nullptr) return nullptr;
+        if (right == nullptr)
+            return nullptr;
         Expr *r = malloc(sizeof(Expr));
         r->type = EX_UNARY;
         r->as.unary.right = right;
-        r->as.unary.operator = operator;
+        r->as.unary.operator= operator;
         r->line = right->line;
         return r;
     }
     return primary();
 }
 
-
 static Expr *factor() {
     Expr *expr = exp_unary();
-    if (expr == nullptr) return nullptr;
+    if (expr == nullptr)
+        return nullptr;
     while (match(TOKEN_SLASH) || match(TOKEN_STAR)) {
-        Token operator = parser.previous;
+        Token operator= parser.previous;
         Expr *right = exp_unary();
         expr = create_binary_expr(operator, expr, right);
     }
@@ -456,9 +447,10 @@ static Expr *factor() {
 
 static Expr *term() {
     Expr *expr = factor();
-    if (expr == nullptr) return nullptr;
+    if (expr == nullptr)
+        return nullptr;
     while (match(TOKEN_MINUS) || match(TOKEN_PLUS)) {
-        Token operator = parser.previous;
+        Token operator= parser.previous;
         Expr *right = factor();
         expr = create_binary_expr(operator, expr, right);
     }
@@ -467,9 +459,9 @@ static Expr *term() {
 
 static Expr *comparison() {
     Expr *expr = term();
-    if (expr == nullptr) return nullptr;
-    while (match(TOKEN_GREATER) ||
-           match(TOKEN_GREATER_EQUAL) ||
+    if (expr == nullptr)
+        return nullptr;
+    while (match(TOKEN_GREATER) || match(TOKEN_GREATER_EQUAL) ||
            match(TOKEN_LESS) || match(TOKEN_LESS_EQUAL)) {
         Token operator= parser.previous;
         Expr *right = term();
@@ -480,7 +472,8 @@ static Expr *comparison() {
 
 static Expr *equality() {
     Expr *expr = comparison();
-    if (expr == nullptr) return nullptr;
+    if (expr == nullptr)
+        return nullptr;
     while (match(TOKEN_BANG_EQUAL) || match(TOKEN_EQUAL_EQUAL)) {
         Token op = parser.previous;
         Expr *right = comparison();
@@ -489,7 +482,7 @@ static Expr *equality() {
     return expr;
 }
 
-Expr *parse(const char *source) { 
+Expr *parse(const char *source) {
     initScanner(source);
     parser.hadError = false;
     parser.panicMode = false;
@@ -497,9 +490,7 @@ Expr *parse(const char *source) {
     return equality();
 }
 
-bool hadError() {
-    return parser.hadError;
-}
+bool hadError() { return parser.hadError; }
 
 bool compile(const char *source, Chunk *chunk) {
     initScanner(source);
