@@ -1,3 +1,4 @@
+#include "compiler.h"
 #define _POSIX_C_SOURCE 200809L
 #include "scanner.h"
 #include "vm.h"
@@ -35,7 +36,8 @@ int main(int argc, char *argv[]) {
         return hadError ? 65 : 0;
     } else if (strcmp(command, "parse") == 0) {
         char *source = read_file_contents(argv[2]);
-        Ast ast = parse(source);
+        Expr *ast = parse(source);
+        print_ast(ast);
 
     } else if (strcmp(command, "evaluate") == 0) {
         runFile(argv[2]);

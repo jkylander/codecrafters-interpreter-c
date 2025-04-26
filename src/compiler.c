@@ -1,6 +1,7 @@
 #include "compiler.h"
 #include "chunk.h"
 #include "scanner.h"
+#include <string.h>
 #ifdef DEBUG_PRINT_CODE
 #include "debug.h"
 #endif
@@ -40,6 +41,166 @@ typedef struct {
 
 Parser parser;
 Chunk *compilingChunk;
+
+typedef enum {
+    EX_ASSIGN,
+    EX_BINARY,
+    EX_CALL,
+    EX_GET,
+    EX_GROUPING,
+    EX_LITERAL,
+    EX_LOGICAL,
+    EX_SET,
+    EX_SUPER,
+    EX_THIS,
+    EX_UNARY,
+    EX_VARIABLE,
+
+    EX_EXPR_COUNT
+} ExprType;
+
+typedef enum {
+    VAL_BOOL,
+    VAL_NIL,
+    VAL_NUMBER,
+    VAL_STRING,
+} ObjectType;
+
+typedef struct {
+    ObjectType type;
+    union {
+        bool boolean;
+        Value number;
+        char *string;
+    } as;
+} Object;
+
+typedef struct Expr Expr;
+
+struct Expr {
+    ExprType type;
+    int line;
+    union {
+        struct {
+            Token operator;
+            Expr *left;
+            Expr *right;
+        } binary;
+        struct {
+            Expr *expression;
+        } grouping;
+        struct {
+            Object *value;
+        } literal;
+        struct {
+            Token operator;
+            Expr *right;
+        } unary;
+    } as;
+};
+
+static Expr *create_binary_expr(Token binary_op, Expr *left, Expr *right) {
+    Expr *expr = malloc(sizeof(Expr));
+    expr->type = EX_BINARY;
+    expr->as.binary.left = left;
+    expr->as.binary.right = right;
+    expr->as.binary.operator= binary_op;
+    expr->line = left->line;
+    return expr;
+}
+
+static Expr *create_literal_expr(Token token) {
+    Expr *expr = malloc(sizeof(Expr));
+    expr->type = EX_LITERAL;
+    Object *v = malloc(sizeof(Object));
+
+    if (token.type == TOKEN_NUMBER) {
+        v->type = VAL_NUMBER;
+        v->as.number = strtod(token.start, NULL);
+    } else if (token.type == TOKEN_NIL) {
+        v->type = VAL_NIL;
+        v->as.number = 0;
+    } else if (token.type == TOKEN_TRUE || token.type == TOKEN_FALSE) {
+        v->type = VAL_BOOL;
+        v->as.boolean = token.type == TOKEN_TRUE;
+    } else {
+        v->type = VAL_STRING;
+        char *str = malloc(token.length + 1);
+        strncpy(str, token.start, token.length);
+        str[token.length] = '\0';
+        v->as.string = str;
+    }
+
+    expr->as.literal.value = v;
+    expr->line = token.line;
+    return expr;
+}
+
+static Expr *create_grouping_expr(Expr *expression) {
+    Expr *expr = malloc(sizeof(Expr));
+    expr->type = EX_GROUPING;
+    expr->as.grouping.expression = expression;
+    expr->line = expression->line;
+    return expr;
+}
+
+void free_expr(Expr *expr) {
+    if (!expr)
+        return;
+    switch (expr->type) {
+        case EX_BINARY:
+            free_expr(expr->as.binary.left);
+            free_expr(expr->as.binary.right);
+            break;
+        case EX_GROUPING: free_expr(expr->as.grouping.expression); break;
+        case EX_UNARY: free_expr(expr->as.unary.right); break;
+        case EX_LITERAL: break;
+        default: break;
+    }
+}
+
+void print_ast(Expr *expr) {
+    if (expr != NULL) {
+        if (expr->type == EX_LITERAL) {
+            if (expr->as.literal.value->type == VAL_STRING) {
+                printf("%s", expr->as.literal.value->as.string);
+            } else if (expr->as.literal.value->type == VAL_BOOL) {
+                printf("%s", expr->as.literal.value->as.boolean == 1 ? "true"
+                                                                     : "false");
+
+            } else if (expr->as.literal.value->type == VAL_NIL) {
+                printf("nil");
+
+            } else if (expr->as.literal.value->type == VAL_NUMBER) {
+                double value = expr->as.literal.value->as.number;
+                if (value == (int) value) {
+                    printf("%.1f", value);
+                } else {
+                    printf("%g", value);
+                }
+            } else {
+                printf("%s", expr->as.literal.value->as.string);
+            }
+        } else if (expr->type == EX_BINARY) {
+            printf("(%.*s ", expr->as.binary.operator.length,
+                   expr->as.binary.operator.start);
+            print_ast(expr->as.binary.left);
+            printf(" ");
+            print_ast(expr->as.binary.right);
+            printf(")");
+        } else if (expr->type == EX_GROUPING) {
+            printf("(group ");
+            print_ast(expr->as.grouping.expression);
+            printf(")");
+        } else if (expr->type == EX_UNARY) {
+            printf("(%.*s ", expr->as.unary.operator.length,
+                   expr->as.unary.operator.start);
+            print_ast(expr->as.unary.right);
+            printf(")");
+        }
+    }
+    printf("\n");
+}
 
 static Chunk *currentChunk() { return compilingChunk; }
 
@@ -224,6 +385,111 @@ static void parsePrecedence(Precedence precedence) {
 }
 
 static ParseRule *getRule(TokenType type) { return &rules[type]; }
+
+
+static bool match(TokenType type) {
+    if (parser.current.type == type) {
+        advance();
+        return true;
+    }
+    return false;
+}
+
+static Expr *equality();
+Expr *parse_expression() {
+    return equality();
+}
+
+static Expr *primary() {
+    Token current = parser.current;
+    if (current.type == TOKEN_EOF) {
+        errorAtCurrent("Unexpected end of input.");
+        return nullptr;
+    }
+
+    if (match(TOKEN_TRUE) || match(TOKEN_FALSE) ||
+        match(TOKEN_NIL)) {
+        return create_literal_expr(parser.previous);
+    }
+    if (match(TOKEN_NUMBER) ||
+        match(TOKEN_STRING)) {
+        return create_literal_expr(parser.previous);
+    }
+
+    if (match(TOKEN_LEFT_PAREN)) {
+        Expr *expr = parse_expression();
+        consume(TOKEN_RIGHT_PAREN, "Expect ') after expression");
+        return create_grouping_expr(expr);
+    }
+    errorAtCurrent("Expect expression.");
+    return nullptr;
+}
+
+
+static Expr *exp_unary() {
+    if (match(TOKEN_BANG) || match(TOKEN_MINUS)) {
+        Token operator = parser.previous;
+        Expr *right = exp_unary();
+        Expr *r = malloc(sizeof(Expr));
+        r->type = EX_UNARY;
+        r->as.unary.right = right;
+        r->as.unary.operator = operator;
+        r->line = right->line;
+        return r;
+    }
+    return primary();
+}
+
+
+static Expr *factor() {
+    Expr *expr = exp_unary();
+    while (match(TOKEN_SLASH) || match(TOKEN_STAR)) {
+        Token operator = parser.previous;
+        Expr *right = exp_unary();
+        expr = create_binary_expr(operator, expr, right);
+    }
+    return expr;
+}
+
+static Expr *term() {
+    Expr *expr = factor();
+    while (match(TOKEN_MINUS) || match(TOKEN_PLUS)) {
+        Token operator = parser.previous;
+        Expr *right = factor();
+        expr = create_binary_expr(operator, expr, right);
+    }
+    return expr;
+}
+
+static Expr *comparison() {
+    Expr *expr = term();
+    while (match(TOKEN_GREATER) ||
+           match(TOKEN_GREATER_EQUAL) ||
+           match(TOKEN_LESS) || match(TOKEN_LESS_EQUAL)) {
+        Token operator= parser.previous;
+        Expr *right = term();
+        expr = create_binary_expr(operator, expr, right);
+    }
+    return expr;
+}
+
+static Expr *equality() {
+    Expr *expr = comparison();
+    while (match(TOKEN_BANG_EQUAL) || match(TOKEN_EQUAL_EQUAL)) {
+        Token op = parser.previous;
+        Expr *right = comparison();
+        expr = create_binary_expr(op, expr, right);
+    }
+    return expr;
+}
+
+Expr *parse(const char *source) { 
+    initScanner(source);
+    parser.hadError = false;
+    parser.panicMode = false;
+    advance();
+    return equality();
+}
 
 bool compile(const char *source, Chunk *chunk) {
     initScanner(source);
