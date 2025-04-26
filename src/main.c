@@ -38,6 +38,7 @@ int main(int argc, char *argv[]) {
         char *source = read_file_contents(argv[2]);
         Expr *ast = parse(source);
         print_ast(ast);
+        printf("\n");
 
     } else if (strcmp(command, "evaluate") == 0) {
         runFile(argv[2]);

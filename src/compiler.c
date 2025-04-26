@@ -199,7 +199,6 @@ void print_ast(Expr *expr) {
             printf(")");
         }
     }
-    printf("\n");
 }
 
 static Chunk *currentChunk() { return compilingChunk; }
