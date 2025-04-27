@@ -505,6 +505,21 @@ Expr *parse(const char *source) {
 
 bool hadError() { return parser.hadError; }
 
+
+bool compile_expression(const char *source, Chunk *chunk) {
+    initScanner(source);
+    compilingChunk = chunk;
+
+    parser.hadError = false;
+    parser.panicMode = false;
+
+    advance();
+    expression();
+    consume(TOKEN_EOF, "Expect end of expression.");
+    endCompiler();
+    return !parser.hadError;
+}
+
 bool compile(const char *source, Chunk *chunk) {
     initScanner(source);
     compilingChunk = chunk;

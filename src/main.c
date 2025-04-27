@@ -44,8 +44,18 @@ int main(int argc, char *argv[]) {
         printf("\n");
 
     } else if (strcmp(command, "evaluate") == 0) {
-        runFile(argv[2]);
+        char *source = read_file_contents(argv[2]);
+        InterpretResult result = evaluate(source);
+        free(source);
+        if (result == INTERPRET_COMPILE_ERROR) exit(65);
+        if (result == INTERPRET_RUNTIME_ERROR) exit(70);
 
+    } else if (strcmp(command, "run")) {
+        char *source = read_file_contents(argv[2]);
+        InterpretResult result = interpret(source);
+        free(source);
+        if (result == INTERPRET_COMPILE_ERROR) exit(65);
+        if (result == INTERPRET_RUNTIME_ERROR) exit(70);
     } else {
         fprintf(stderr, "Unknown command: %s\n", command);
         return 1;

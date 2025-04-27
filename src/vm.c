@@ -148,6 +148,23 @@ static InterpretResult run() {
 #undef READ_CONSTANT
 #undef BINARY_OP
 }
+
+InterpretResult evaluate(const char *source) {
+    Chunk chunk;
+    initChunk(&chunk);
+    if (!compile_expression(source, &chunk)) {
+        freeChunk(&chunk);
+        return INTERPRET_COMPILE_ERROR;
+    }
+
+    vm.chunk = &chunk;
+    vm.ip = vm.chunk->code;
+
+    InterpretResult result = run();
+    freeChunk(&chunk);
+    return result;
+}
+
 InterpretResult interpret(const char *source) {
     Chunk chunk;
     initChunk(&chunk);
