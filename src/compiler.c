@@ -1,5 +1,6 @@
 #include "compiler.h"
 #include "chunk.h"
+#include "object.h"
 #include "scanner.h"
 #include "value.h"
 #include <string.h>
@@ -109,11 +110,9 @@ static Expr *create_literal_expr(Token token) {
         v->type = VAL_BOOL;
         v->as.boolean = token.type == TOKEN_TRUE;
     } else {
-        v->type = VAL_STRING;
-        char *str = malloc(token.length - 1);
-        strncpy(str, token.start + 1, token.length - 1);
-        str[token.length - 2] = '\0';
-        v->as.string = str;
+        v->type = VAL_OBJ;
+        ObjString *s = copyString(token.start + 1, token.length - 2);
+        v->as.obj = (Obj*)s;
     }
 
     expr->as.literal.value = v;
@@ -149,8 +148,9 @@ void print_ast(Expr *expr) {
         return;
     if (expr != NULL) {
         if (expr->type == EX_LITERAL) {
-            if (expr->as.literal.value->type == VAL_STRING) {
-                printf("%s", expr->as.literal.value->as.string);
+            if (expr->as.literal.value->type == VAL_OBJ) {
+                Value v = *expr->as.literal.value;
+                printf("%s", AS_CSTRING(v));
             } else if (expr->as.literal.value->type == VAL_BOOL) {
                 printf("%s", expr->as.literal.value->as.boolean == 1 ? "true"
                                                                      : "false");
@@ -166,7 +166,8 @@ void print_ast(Expr *expr) {
                     printf("%.*f", count_decimals(value), value);
                 }
             } else {
-                printf("%s", expr->as.literal.value->as.string);
+                Value v = *expr->as.literal.value;
+                printf("%s", AS_CSTRING(v));
             }
         } else if (expr->type == EX_BINARY) {
             printf("(%.*s ", expr->as.binary.operator.length,
@@ -277,6 +278,12 @@ static void binary() {
     parsePrecedence((Precedence) (rule->precedence + 1));
 
     switch (operatorType) {
+        case TOKEN_BANG_EQUAL: emitBytes(OP_EQUAL, OP_NOT); break;
+        case TOKEN_EQUAL_EQUAL: emitByte(OP_EQUAL); break;
+        case TOKEN_GREATER: emitByte(OP_GREATER); break;
+        case TOKEN_GREATER_EQUAL: emitBytes(OP_LESS, OP_NOT);
+        case TOKEN_LESS: emitByte(OP_LESS); break;
+        case TOKEN_LESS_EQUAL: emitBytes(OP_GREATER, OP_NOT);
         case TOKEN_PLUS: emitByte(OP_ADD); break;
         case TOKEN_MINUS: emitByte(OP_SUBTRACT); break;
         case TOKEN_STAR: emitByte(OP_MULTIPLY); break;
@@ -306,12 +313,18 @@ static void number() {
     emitConstant(NUMBER_VAL(value));
 }
 
+static void string() {
+    emitConstant(OBJ_VAL(
+        copyString(parser.previous.start + 1, parser.previous.length - 2)));
+}
+
 static void unary() {
     TokenType operatorType = parser.previous.type;
 
     parsePrecedence(PREC_UNARY);
 
     switch (operatorType) {
+        case TOKEN_BANG: emitByte(OP_NOT); break;
         case TOKEN_MINUS: emitByte(OP_NEGATE); break;
         default: return;
     }
@@ -330,16 +343,16 @@ ParseRule rules[] = {
   [TOKEN_SEMICOLON]     = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_SLASH]         = {nullptr,     binary,    PREC_FACTOR},
   [TOKEN_STAR]          = {nullptr,     binary,    PREC_FACTOR},
-  [TOKEN_BANG]          = {nullptr,     nullptr,   PREC_NONE},
-  [TOKEN_BANG_EQUAL]    = {nullptr,     nullptr,   PREC_NONE},
+  [TOKEN_BANG]          = {unary,       nullptr,   PREC_NONE},
+  [TOKEN_BANG_EQUAL]    = {nullptr,     binary,    PREC_EQUALITY},
   [TOKEN_EQUAL]         = {nullptr,     nullptr,   PREC_NONE},
-  [TOKEN_EQUAL_EQUAL]   = {nullptr,     nullptr,   PREC_NONE},
-  [TOKEN_GREATER]       = {nullptr,     nullptr,   PREC_NONE},
-  [TOKEN_GREATER_EQUAL] = {nullptr,     nullptr,   PREC_NONE},
-  [TOKEN_LESS]          = {nullptr,     nullptr,   PREC_NONE},
-  [TOKEN_LESS_EQUAL]    = {nullptr,     nullptr,   PREC_NONE},
+  [TOKEN_EQUAL_EQUAL]   = {nullptr,     binary,    PREC_EQUALITY},
+  [TOKEN_GREATER]       = {nullptr,     binary,    PREC_COMPARISON},
+  [TOKEN_GREATER_EQUAL] = {nullptr,     binary,    PREC_COMPARISON},
+  [TOKEN_LESS]          = {nullptr,     binary,    PREC_COMPARISON},
+  [TOKEN_LESS_EQUAL]    = {nullptr,     binary,    PREC_COMPARISON},
   [TOKEN_IDENTIFIER]    = {nullptr,     nullptr,   PREC_NONE},
-  [TOKEN_STRING]        = {nullptr,     nullptr,   PREC_NONE},
+  [TOKEN_STRING]        = {string,      nullptr,   PREC_NONE},
   [TOKEN_NUMBER]        = {number,      nullptr,   PREC_NONE},
   [TOKEN_AND]           = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_CLASS]         = {nullptr,     nullptr,   PREC_NONE},

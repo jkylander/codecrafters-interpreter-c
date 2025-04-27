@@ -2,6 +2,7 @@
 #define SCANNER_H
 
 #define TOKEN_KINDS                                                            \
+    TOKEN_KIND(TOKEN_ERROR, "ERROR")                                           \
     TOKEN_KIND(TOKEN_LEFT_PAREN, "LEFT_PAREN")                                 \
     TOKEN_KIND(TOKEN_RIGHT_PAREN, "RIGHT_PAREN")                               \
     TOKEN_KIND(TOKEN_LEFT_BRACE, "LEFT_BRACE")                                 \
@@ -40,7 +41,6 @@
     TOKEN_KIND(TOKEN_TRUE, "TRUE")                                             \
     TOKEN_KIND(TOKEN_VAR, "VAR")                                               \
     TOKEN_KIND(TOKEN_WHILE, "WHILE")                                           \
-    TOKEN_KIND(TOKEN_ERROR, "ERROR")                                           \
     TOKEN_KIND(TOKEN_EOF, "EOF")                                               \
     TOKEN_KIND(TOKEN_COUNT, "")
 
