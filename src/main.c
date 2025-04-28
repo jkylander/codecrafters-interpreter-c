@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
         if (result == INTERPRET_COMPILE_ERROR) exit(65);
         if (result == INTERPRET_RUNTIME_ERROR) exit(70);
 
-    } else if (strcmp(command, "run")) {
+    } else if (strcmp(command, "run") == 0) {
         char *source = read_file_contents(argv[2]);
         InterpretResult result = interpret(source);
         free(source);
