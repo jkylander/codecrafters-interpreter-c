@@ -881,6 +881,7 @@ ObjFunction *compile_expression(const char *source) {
     advance();
     expression();
     consume(TOKEN_EOF, "Expect end of expression.");
+    emitByte(OP_PRINT);
     ObjFunction *function = endCompiler();
     return parser.hadError ? nullptr : function;
 }
