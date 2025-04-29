@@ -2,8 +2,9 @@
 #define COMPILER_H
 
 #include "chunk.h"
-bool compile(const char *source, Chunk *chunk);
-bool compile_expression(const char *source, Chunk *chunk);
+#include "object.h"
+ObjFunction *compile(const char *source);
+ObjFunction *compile_expression(const char *source);
 
 typedef struct Expr Expr;
 void print_ast(Expr *expr);

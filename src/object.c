@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "chunk.h"
 #include "memory.h"
 #include "object.h"
 #include "table.h"
@@ -41,17 +42,35 @@ static uint32_t hashString(const char *key, int length) {
 ObjString *copyString(const char *chars, int length) {
     uint32_t hash = hashString(chars, length);
     ObjString *interned = tableFindString(&vm.strings, chars, length, hash);
-    if (interned != nullptr) return interned;
+    if (interned != nullptr)
+        return interned;
     char *heapChars = ALLOCATE(char, length + 1);
     memcpy(heapChars, chars, length);
     heapChars[length] = '\0';
     return allocateString(heapChars, length, hash);
 }
 
+static void printFunction(ObjFunction *function) {
+    if (function->name == nullptr) {
+        printf("<script>");
+        return;
+    }
+    printf("fn < %s>", function->name->chars);
+}
+
 void printObject(Value value) {
     switch (OBJ_TYPE(value)) {
+        case OBJ_FUNCTION: printFunction(AS_FUNCTION(value));
         case OBJ_STRING: printf("%s", AS_CSTRING(value)); break;
     }
+}
+
+ObjFunction *newFunction() {
+    ObjFunction *function = ALLOCATE_OBJ(ObjFunction, OBJ_FUNCTION);
+    function->arity = 0;
+    function->name = nullptr;
+    initChunk(&function->chunk);
+    return function;
 }
 
 ObjString *takeString(char *chars, int length) {
