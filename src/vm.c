@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "chunk.h"
 #include "compiler.h"
@@ -13,6 +14,10 @@
 #include "vm.h"
 
 VM vm;
+
+static Value clockNative(int argCount, Value *args) {
+    return NUMBER_VAL((double) clock() / CLOCKS_PER_SEC);
+}
 static void resetStack() {
     vm.stackTop = vm.stack;
     vm.frameCount = 0;
@@ -39,11 +44,21 @@ static void runtimeError(const char *format, ...) {
 
     resetStack();
 }
+
+static void defineNative(const char *name, NativeFn function) {
+    push(OBJ_VAL(copyString(name, (int) strlen(name))));
+    push(OBJ_VAL(newNative(function)));
+    tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
+    pop();
+    pop();
+}
+
 void initVM() {
     resetStack();
     vm.objects = nullptr;
     initTable(&vm.strings);
     initTable(&vm.globals);
+    defineNative("clock", clockNative);
 }
 void freeVM() {
     freeTable(&vm.strings);
@@ -84,6 +99,13 @@ static bool callValue(Value callee, int argCount) {
     if (IS_OBJ(callee)) {
         switch (OBJ_TYPE(callee)) {
             case OBJ_FUNCTION: return call(AS_FUNCTION(callee), argCount);
+            case OBJ_NATIVE: {
+                NativeFn native = AS_NATIVE(callee);
+                Value result = native(argCount, vm.stackTop - argCount);
+                vm.stackTop -= argCount + 1;
+                push(result);
+                return true;
+            }
             default: break;
         }
     }
@@ -107,158 +129,6 @@ static void concatenate() {
 
     ObjString *result = takeString(chars, length);
     push(OBJ_VAL(result));
-}
-
-
-static InterpretResult run_expr() {
-    CallFrame *frame = &vm.frames[vm.frameCount - 1];
-#define READ_BYTE() (*frame->ip++)
-#define READ_CONSTANT() (frame->function->chunk.constants.values[READ_BYTE()])
-#define READ_STRING() AS_STRING(READ_CONSTANT())
-#define READ_SHORT()                                                           \
-    (frame->ip += 2, (uint16_t) ((frame->ip[-2] << 8) | frame->ip[-1]))
-#define BINARY_OP(valueType, op)                                               \
-    do {                                                                       \
-        if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {                      \
-            runtimeError("Operands must be numbers.");                         \
-            return INTERPRET_RUNTIME_ERROR;                                    \
-        }                                                                      \
-        double b = AS_NUMBER(pop());                                           \
-        double a = AS_NUMBER(pop());                                           \
-        push(valueType(a op b));                                               \
-    } while (0)
-
-    for (;;) {
-#ifdef DEBUG_TRACE_EXECUTION
-        printf("         ");
-        for (Value *slot = vm.stack; slot < vm.stackTop; slot++) {
-            printf("[ ");
-            printValue(*slot);
-            printf(" ]");
-        }
-        printf("\n");
-        disassembleInstruction(&frame->function->chunk,
-                               (int) (frame->ip - frame->function->chunk.code));
-#endif
-        OpCode instruction;
-        switch (instruction = READ_BYTE()) {
-            case OP_CONSTANT: {
-                Value constant = READ_CONSTANT();
-                push(constant);
-                break;
-            }
-            case OP_NIL: push(NIL_VAL); break;
-            case OP_TRUE: push(BOOL_VAL(true)); break;
-            case OP_FALSE: push(BOOL_VAL(false)); break;
-            case OP_POP: pop(); break;
-            case OP_GET_LOCAL: {
-                uint8_t slot = READ_BYTE();
-                push(frame->slots[slot]);
-                break;
-            }
-            case OP_SET_LOCAL: {
-                uint8_t slot = READ_BYTE();
-                frame->slots[slot] = peek(0);
-                break;
-            }
-            case OP_GET_GLOBAL: {
-                ObjString *name = READ_STRING();
-                Value value;
-                if (!tableGet(&vm.globals, name, &value)) {
-                    runtimeError("Undefined variable '%s'.", name->chars);
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                push(value);
-                break;
-            }
-            case OP_DEFINE_GLOBAL: {
-                ObjString *name = READ_STRING();
-                tableSet(&vm.globals, name, peek(0));
-                pop();
-                break;
-            }
-            case OP_SET_GLOBAL: {
-                ObjString *name = READ_STRING();
-                if (tableSet(&vm.globals, name, peek(0))) {
-                    tableDelete(&vm.globals, name);
-                    runtimeError("Undefined variable '%s'.", name->chars);
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                break;
-            }
-            case OP_EQUAL: {
-                Value a = pop();
-                Value b = pop();
-                push(BOOL_VAL(valuesEqual(a, b)));
-                break;
-            }
-            case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
-            case OP_LESS: BINARY_OP(BOOL_VAL, <); break;
-            case OP_ADD: {
-                if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
-                    concatenate();
-                } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
-                    double b = AS_NUMBER(pop());
-                    double a = AS_NUMBER(pop());
-                    push(NUMBER_VAL(a + b));
-                } else {
-                    runtimeError(
-                        "Operands must be two numbers or two strings.");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                break;
-            }
-            case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
-            case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
-            case OP_DIVIDE: BINARY_OP(NUMBER_VAL, /); break;
-            case OP_NOT: push(BOOL_VAL(isFalsey(pop()))); break;
-            case OP_NEGATE: {
-                if (!IS_NUMBER(peek(0))) {
-                    runtimeError("Operand must be a number.");
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                push(NUMBER_VAL(-AS_NUMBER(pop())));
-                break;
-            }
-            case OP_PRINT: {
-                printValue(pop());
-                printf("\n");
-                break;
-            }
-            case OP_JUMP: {
-                uint16_t offset = READ_SHORT();
-                frame->ip += offset;
-                break;
-            }
-            case OP_JUMP_IF_FALSE: {
-                uint16_t offset = READ_SHORT();
-                if (isFalsey(peek(0)))
-                    frame->ip += offset;
-                break;
-            }
-            case OP_LOOP: {
-                uint16_t offset = READ_SHORT();
-                frame->ip -= offset;
-                break;
-            }
-            case OP_CALL: {
-                int argCount = READ_BYTE();
-                if (!callValue(peek(argCount), argCount)) {
-                    return INTERPRET_RUNTIME_ERROR;
-                }
-                frame = &vm.frames[vm.frameCount - 1];
-                break;
-            }
-            case OP_RETURN: {
-                return INTERPRET_OK;
-            }
-        }
-    }
-#undef READ_BYTE
-#undef READ_CONSTANT
-#undef READ_STRING
-#undef READ_SHORT
-#undef BINARY_OP
 }
 
 static InterpretResult run() {
