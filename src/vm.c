@@ -18,6 +18,10 @@ VM vm;
 static Value clockNative(int argCount, Value *args) {
     return NUMBER_VAL((double) clock() / CLOCKS_PER_SEC);
 }
+
+static Value timeNative(int argCount, Value *args) {
+    return NUMBER_VAL((double) time(nullptr));
+}
 static void resetStack() {
     vm.stackTop = vm.stack;
     vm.frameCount = 0;
@@ -58,7 +62,8 @@ void initVM() {
     vm.objects = nullptr;
     initTable(&vm.strings);
     initTable(&vm.globals);
-    defineNative("clock", clockNative);
+    defineNative("clock", timeNative);
+    defineNative("wallClock", clockNative);
 }
 void freeVM() {
     freeTable(&vm.strings);
