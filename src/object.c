@@ -55,12 +55,12 @@ static void printFunction(ObjFunction *function) {
         printf("<script>");
         return;
     }
-    printf("fn < %s>", function->name->chars);
+    printf("fn <%s>", function->name->chars);
 }
 
 void printObject(Value value) {
     switch (OBJ_TYPE(value)) {
-        case OBJ_FUNCTION: printFunction(AS_FUNCTION(value));
+        case OBJ_FUNCTION: printFunction(AS_FUNCTION(value)); break;
         case OBJ_STRING: printf("%s", AS_CSTRING(value)); break;
     }
 }
