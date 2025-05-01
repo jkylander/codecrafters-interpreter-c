@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -15,16 +16,54 @@
 
 VM vm;
 
+static void nativeError(const char *format, ...);
+
+static Value printErrNative(int argCount, Value *args) {
+    if (argCount != 1) {
+        nativeError("Expected 1 argument but got %d", argCount);
+    }
+    if (!IS_STRING(args[0])) {
+        nativeError("Expected string argument.");
+    }
+    fprintf(stderr, "%s\n", AS_CSTRING(args[0]));
+    return BOOL_VAL(true);
+}
+
 static Value clockNative(int argCount, Value *args) {
+    (void) argCount, (void) args;
     return NUMBER_VAL((double) clock() / CLOCKS_PER_SEC);
 }
 
 static Value timeNative(int argCount, Value *args) {
+    (void) argCount, (void) args;
     return NUMBER_VAL((double) time(nullptr));
 }
 static void resetStack() {
     vm.stackTop = vm.stack;
     vm.frameCount = 0;
+}
+
+static void nativeError(const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+    fputs("\n", stderr);
+
+    for (int i = vm.frameCount - 1; i >= 0; i--) {
+        CallFrame *frame = &vm.frames[i];
+        ObjFunction *function = frame->function;
+        size_t instruction = frame->ip - function->chunk.code - 1;
+        fprintf(stderr, "[line %d] in ", function->chunk.lines[instruction]);
+        if (function->name == nullptr) {
+            fprintf(stderr, "script\n");
+        } else {
+            fprintf(stderr, "%s()\n", function->name->chars);
+        }
+    }
+
+    freeVM();
+    exit(65);
 }
 
 static void runtimeError(const char *format, ...) {
@@ -64,6 +103,7 @@ void initVM() {
     initTable(&vm.globals);
     defineNative("clock", timeNative);
     defineNative("wallClock", clockNative);
+    defineNative("error", printErrNative);
 }
 void freeVM() {
     freeTable(&vm.strings);
