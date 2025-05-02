@@ -5,6 +5,7 @@
 #include "object.h"
 ObjFunction *compile(const char *source);
 ObjFunction *compile_expression(const char *source);
+void markCompilerRoots();
 
 typedef struct Expr Expr;
 void print_ast(Expr *expr);

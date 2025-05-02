@@ -8,20 +8,33 @@
 #include "value.h"
 #include "vm.h"
 
+const char *const ObjType_String[] = {
+    #define X(e) #e,
+    OBJ_TYPE_ENUM
+    #undef X
+};
+
 #define ALLOCATE_OBJ(type, objectType)                                         \
     (type *) allocateObject(sizeof(type), objectType)
 
 static Obj *allocateObject(size_t size, ObjType type) {
     Obj *object = (Obj *) reallocate(nullptr, 0, size);
     object->type = type;
+    object->isMarked = false;
 
     object->next = vm.objects;
     vm.objects = object;
+
+
+#ifdef DEBUG_LOG_GC
+    printf("%p allocate %zu for %s\n", (void *) object, size, ObjType_String[type]);
+#endif
+
     return object;
 }
 
 ObjClosure *newClosure(ObjFunction *function) {
-    ObjUpvalue **upvalues = ALLOCATE(ObjUpvalue*, function->upvalueCount);
+    ObjUpvalue **upvalues = ALLOCATE(ObjUpvalue *, function->upvalueCount);
     for (int i = 0; i < function->upvalueCount; i++) {
         upvalues[i] = nullptr;
     }
@@ -37,7 +50,10 @@ static ObjString *allocateString(char *chars, int length, uint32_t hash) {
     string->length = length;
     string->chars = chars;
     string->hash = hash;
+    push(OBJ_VAL(string));
     tableSet(&vm.strings, string, NIL_VAL);
+    pop();
+
     return string;
 }
 

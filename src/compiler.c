@@ -2,6 +2,7 @@
 #include "compiler.h"
 #include "chunk.h"
 #include "common.h"
+#include "memory.h"
 #include "object.h"
 #include "scanner.h"
 #include "value.h"
@@ -360,7 +361,7 @@ static void endScope() {
     while (current->localCount > 0 &&
            current->locals[current->localCount - 1].depth >
                current->scopeDepth) {
-        if (current->locals[current->localCount -1].isCaptured) {
+        if (current->locals[current->localCount - 1].isCaptured) {
             emitByte(OP_CLOSE_UPVALUE);
         } else {
             emitByte(OP_POP);
@@ -1040,4 +1041,12 @@ ObjFunction *compile(const char *source) {
     }
     ObjFunction *function = endCompiler();
     return parser.hadError ? nullptr : function;
+}
+
+void markCompilerRoots() {
+    Compiler *compiler = current;
+    while (compiler != nullptr) {
+        markObject((Obj *) compiler->function);
+        compiler = compiler->enclosing;
+    }
 }

@@ -18,16 +18,22 @@
 #define AS_STRING(value) ((ObjString *) AS_OBJ(value))
 #define AS_CSTRING(value) (((ObjString *) AS_OBJ(value))->chars)
 
+#define OBJ_TYPE_ENUM                                                          \
+    X(OBJ_CLOSURE)                                                             \
+    X(OBJ_UPVALUE)                                                             \
+    X(OBJ_FUNCTION)                                                            \
+    X(OBJ_NATIVE)                                                              \
+    X(OBJ_STRING)
+
 typedef enum {
-    OBJ_CLOSURE,
-    OBJ_UPVALUE,
-    OBJ_FUNCTION,
-    OBJ_NATIVE,
-    OBJ_STRING,
+    #define X(e) e,
+    OBJ_TYPE_ENUM
+    #undef X
 } ObjType;
 
 struct Obj {
     ObjType type;
+    bool isMarked;
     struct Obj *next;
 };
 
@@ -78,5 +84,8 @@ void printObject(Value value);
 static inline bool isObjType(Value value, ObjType type) {
     return IS_OBJ(value) && AS_OBJ(value)->type == type;
 }
+
+
+extern const char *const ObjType_String[];
 
 #endif /* OBJECT_H */
