@@ -9,9 +9,9 @@
 #include "vm.h"
 
 const char *const ObjType_String[] = {
-    #define X(e) #e,
+#define X(e) #e,
     OBJ_TYPE_ENUM
-    #undef X
+#undef X
 };
 
 #define ALLOCATE_OBJ(type, objectType)                                         \
@@ -25,12 +25,18 @@ static Obj *allocateObject(size_t size, ObjType type) {
     object->next = vm.objects;
     vm.objects = object;
 
-
 #ifdef DEBUG_LOG_GC
-    printf("%p allocate %zu for %s\n", (void *) object, size, ObjType_String[type]);
+    printf("%p allocate %zu for %s\n", (void *) object, size,
+           ObjType_String[type]);
 #endif
 
     return object;
+}
+
+ObjClass *newClass(ObjString *name) {
+    ObjClass *class = ALLOCATE_OBJ(ObjClass, OBJ_CLASS);
+    class->name = name;
+    return class;
 }
 
 ObjClosure *newClosure(ObjFunction *function) {
@@ -96,9 +102,13 @@ static void printFunction(ObjFunction *function) {
 
 void printObject(Value value) {
     switch (OBJ_TYPE(value)) {
+        case OBJ_CLASS: printf("%s", AS_CLASS(value)->name->chars); break;
         case OBJ_CLOSURE: printFunction(AS_CLOSURE(value)->function); break;
         case OBJ_UPVALUE: printf("upvalue"); break;
         case OBJ_FUNCTION: printFunction(AS_FUNCTION(value)); break;
+        case OBJ_INSTANCE:
+            printf("%s instance", AS_INSTANCE(value)->class->name->chars);
+            break;
         case OBJ_NATIVE: printf("<native fn>"); break;
         case OBJ_STRING: printf("%s", AS_CSTRING(value)); break;
     }
@@ -111,6 +121,13 @@ ObjFunction *newFunction() {
     function->name = nullptr;
     initChunk(&function->chunk);
     return function;
+}
+
+ObjInstance *newInstance(ObjClass *class) {
+    ObjInstance *instance = ALLOCATE_OBJ(ObjInstance, OBJ_INSTANCE);
+    instance->class = class;
+    initTable(&instance->fields);
+    return instance;
 }
 
 ObjNative *newNative(NativeFn function) {
