@@ -66,7 +66,6 @@ void print_token(Token token) {
 bool lex(const char *source) {
     bool hadError = false;
     initScanner(source);
-    int line = -1;
     for (;;) {
         Token token = scanToken();
         print_token(token);

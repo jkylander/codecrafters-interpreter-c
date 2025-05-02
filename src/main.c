@@ -8,14 +8,6 @@
 
 char *read_file_contents(const char *filename);
 
-static void runFile(const char *path) {
-    char *source = read_file_contents(path);
-    InterpretResult result = interpret(source);
-    free(source);
-    if (result == INTERPRET_COMPILE_ERROR) exit(65);
-    if (result == INTERPRET_RUNTIME_ERROR) exit(70);
-}
-
 int main(int argc, char *argv[]) {
     initVM();
     // Disable output buffering
