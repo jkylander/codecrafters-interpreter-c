@@ -1,0 +1,23 @@
+fun vec2(x, y) {
+    fun get(field) {
+	if (field == "x") return x;
+	if (field == "y") return y;
+    }
+    fun add(other) {
+	return vec2(x + other("get")("x"), y + other("get")("y"));
+    }
+    fun dot(method) {
+	if (method == "get") return get;
+	else if (method == "add") return add;
+    }
+    return dot;
+}
+
+var v1 = vec2(2, 3);
+var v2 = vec2(4, 5);
+
+printf("v1: (", v1("get")("x"), ", ", v1("get")("y"), ")");
+printf("v2: (", v2("get")("x"), ", ", v2("get")("y"), ")");
+
+var v3 = v1("add")(v2);
+printf("v3 = v1 + v2: (", v3("get")("x"), ", ", v3("get")("y"), ")");

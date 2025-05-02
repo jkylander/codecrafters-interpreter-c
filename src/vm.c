@@ -18,6 +18,14 @@ VM vm;
 
 static void nativeError(const char *format, ...);
 
+static Value printLoxValue(int argCount, Value *args) {
+    for (int i = 0; i < argCount; i++) {
+        printValue(args[i]);
+    }
+    printf("\n");
+    return BOOL_VAL(true);
+}
+
 static Value printErrNative(int argCount, Value *args) {
     if (argCount != 1) {
         nativeError("Expected 1 argument but got %d", argCount);
@@ -111,6 +119,7 @@ void initVM() {
     defineNative("clock", timeNative);
     defineNative("wallClock", clockNative);
     defineNative("error", printErrNative);
+    defineNative("printf", printLoxValue);
 }
 void freeVM() {
     freeTable(&vm.strings);
@@ -189,8 +198,7 @@ static ObjUpvalue *captureUpvalue(Value *local) {
 }
 
 static void closeUpvalues(Value *last) {
-    while (vm.openUpvalues != nullptr &&
-           vm.openUpvalues->location >= last) {
+    while (vm.openUpvalues != nullptr && vm.openUpvalues->location >= last) {
         ObjUpvalue *upvalue = vm.openUpvalues;
         upvalue->closed = *upvalue->location;
         upvalue->location = &upvalue->closed;
@@ -306,7 +314,6 @@ static InterpretResult run() {
                 uint8_t slot = READ_BYTE();
                 *frame->closure->upvalues[slot]->location = peek(0);
                 break;
-
             }
             case OP_EQUAL: {
                 Value a = pop();
@@ -379,7 +386,8 @@ static InterpretResult run() {
                     uint8_t isLocal = READ_BYTE();
                     uint8_t index = READ_BYTE();
                     if (isLocal) {
-                        closure->upvalues[i] = captureUpvalue(frame->slots + index);
+                        closure->upvalues[i] =
+                            captureUpvalue(frame->slots + index);
                     } else {
                         closure->upvalues[i] = frame->closure->upvalues[index];
                     }
