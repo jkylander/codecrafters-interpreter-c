@@ -22,6 +22,7 @@ typedef struct {
     Chunk *chunk;
     uint8_t *ip;
     Table strings;
+    ObjString *initString;
     Table globals;
     ObjUpvalue *openUpvalues;
     size_t bytesAllocated;
