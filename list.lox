@@ -1,1 +1,7 @@
-print [nil][0];
+var l = [1, 2];
+
+l.push(5);
+
+print l[2];
+print l.pop();
+print l.pop();

@@ -124,15 +124,34 @@ void printObject(Value value) {
             ObjList *list = AS_LIST(value);
             putc('[', stdout);
             if (list->elements.count > 0) {
-                printValue(list->elements.values[0]);
+                printValueC(list->elements.values[0]);
             }
             for (int i = 1; i < list->elements.count; i++) {
                 printf(", ");
-                printValue(list->elements.values[i]);
+                printValueC(list->elements.values[i]);
             }
             putc(']', stdout);
         }
-        case OBJ_MAP: break;
+        case OBJ_MAP: {
+            ObjMap *map = AS_MAP(value);
+            putc('{', stdout);
+            bool first = true;
+            for (int i = 0; i < map->table.capacity; ++i) {
+                Entry *entry = &map->table.entries[i];
+                if (entry->key == nullptr) {
+                    continue;
+                }
+                if (first) {
+                    first = false;
+                } else {
+                    printf(", ");
+                }
+                printf("%.*s: ", entry->key->length, entry->key->chars);
+                printValueC(entry->value);
+            }
+            putc('}', stdout);
+            break;
+        }
         case OBJ_NATIVE: printf("<native fn>"); break;
         case OBJ_STRING: printf("%s", AS_CSTRING(value)); break;
     }

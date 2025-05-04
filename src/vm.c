@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -227,10 +228,21 @@ Value pop() {
 
 static Value peek(int distance) { return vm.stackTop[-1 - distance]; }
 
-static bool call(ObjClosure *closure, int argCount) {
-    if (argCount != closure->function->arity) {
-        runtimeError("Expected %d arguments but got %d.",
-                     closure->function->arity, argCount);
+static bool call(Obj *callable, int argCount) {
+    ObjClosure *closure;
+    ObjFunction *function;
+
+    if (callable->type == OBJ_CLOSURE) {
+        closure = (ObjClosure *) callable;
+        function = closure->function;
+    } else {
+        assert(callable->type == OBJ_FUNCTION);
+        closure = nullptr;
+        function = (ObjFunction *) callable;
+    }
+    if (argCount != function->arity) {
+        runtimeError("Expected %d arguments but got %d.", function->arity,
+                     argCount);
         return false;
     }
     if (vm.frameCount == FRAMES_MAX) {
@@ -239,7 +251,8 @@ static bool call(ObjClosure *closure, int argCount) {
     }
     CallFrame *frame = &vm.frames[vm.frameCount++];
     frame->closure = closure;
-    frame->ip = closure->function->chunk.code;
+    frame->function = function;
+    frame->ip = function->chunk.code;
     frame->slots = vm.stackTop - argCount - 1;
     return true;
 }
@@ -250,21 +263,21 @@ static bool callValue(Value callee, int argCount) {
             case OBJ_BOUND_METHOD: {
                 ObjBoundMethod *bound = AS_BOUND_METHOD(callee);
                 vm.stackTop[-argCount - 1] = bound->receiver;
-                return call(bound->method, argCount);
+                return callValue(OBJ_VAL(bound->method), argCount);
             }
             case OBJ_CLASS: {
                 ObjClass *class = AS_CLASS(callee);
                 vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(class));
                 Value initializer;
                 if (tableGet(&class->methods, vm.initString, &initializer)) {
-                    return call(AS_CLOSURE(initializer), argCount);
+                    return callValue(initializer, argCount);
                 } else if (argCount != 0) {
                     runtimeError("Expected 0 arguments but got %d", argCount);
                     return false;
                 }
                 return true;
             }
-            case OBJ_CLOSURE: return call(AS_CLOSURE(callee), argCount);
+            case OBJ_CLOSURE: return call(AS_OBJ(callee), argCount);
             case OBJ_NATIVE: {
                 NativeFn native = AS_NATIVE(callee);
                 Value result = native(argCount, vm.stackTop - argCount);
@@ -285,22 +298,30 @@ static bool invokeFromClass(ObjClass *class, ObjString *name, int argCount) {
         runtimeError("Undefined property '%s'.", name->chars);
         return false;
     }
-    return call(AS_CLOSURE(method), argCount);
+    return callValue(method, argCount);
 }
 
 static bool invoke(ObjString *name, int argCount) {
     Value receiver = peek(argCount);
-    if (!IS_INSTANCE(receiver)) {
-        runtimeError("Only instances have methods.");
+    ObjClass *class;
+
+    if (IS_LIST(receiver)) {
+        class = vm.listClass;
+    } else if (IS_MAP(receiver)) {
+        class = vm.mapClass;
+    } else if (IS_INSTANCE(receiver)) {
+        ObjInstance *instance = AS_INSTANCE(receiver);
+        Value value;
+        if (tableGet(&instance->fields, name, &value)) {
+            vm.stackTop[-argCount - 1] = value;
+            return callValue(value, argCount);
+        }
+        class = instance->class;
+    } else {
+        runtimeError("Only lists, maps, and instances have methods.");
         return false;
     }
-    ObjInstance *instance = AS_INSTANCE(receiver);
-    Value value;
-    if (tableGet(&instance->fields, name, &value)) {
-        vm.stackTop[-argCount - 1] = value;
-        return callValue(value, argCount);
-    }
-    return invokeFromClass(instance->class, name, argCount);
+    return invokeFromClass(class, name, argCount);
 }
 
 static bool bindMethod(ObjClass *class, ObjString *name) {
@@ -749,7 +770,7 @@ InterpretResult evaluate(const char *source) {
     ObjClosure *closure = newClosure(function);
     pop();
     push(OBJ_VAL(closure));
-    call(closure, 0);
+    call((Obj *) closure, 0);
 
     return run();
 }
@@ -762,7 +783,7 @@ InterpretResult interpret(const char *source) {
     ObjClosure *closure = newClosure(function);
     pop();
     push(OBJ_VAL(closure));
-    call(closure, 0);
+    call((Obj *) closure, 0);
 
     return run();
 }

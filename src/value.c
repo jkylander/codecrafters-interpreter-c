@@ -46,6 +46,16 @@ Value removeValueArray(ValueArray *array, int pos) {
     return value;
 }
 
+void printValueC(Value value) {
+    if (IS_LIST(value)) {
+        printf("<list %u>", AS_LIST(value)->elements.count);
+    } else if (IS_MAP(value)) {
+        printf("<map>");
+    } else {
+        printValue(value);
+    }
+}
+
 void printValue(Value value) {
     switch (value.type) {
         case VAL_BOOL: printf(AS_BOOL(value) ? "true" : "false"); break;
