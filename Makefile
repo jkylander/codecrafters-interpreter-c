@@ -1,6 +1,6 @@
 # Compiler and flags
 CC = clang
-CFLAGS_COMMON = -Wall -Wextra -std=c23 -lm
+CFLAGS_COMMON = -Wall -Wextra -std=c23
 CFLAGS_COMMON += -Wno-unused-command-line-argument
 DEPFLAGS = -MMD -MP
 EXECUTABLE = interpreter
@@ -14,9 +14,9 @@ ifeq ($(BUILD),)
 endif
 
 ifeq ($(BUILD),debug)
-	CFLAGS = $(CFLAGS_COMMON) -g -Og -DDEBUG -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
+	CFLAGS = $(CFLAGS_COMMON) -g -Og -DDEBUG #-fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
 else ifeq ($(BUILD),release)
-	CFLAGS = $(CFLAGS_COMMON) -O3 -DNDEBUG -flto -march=native
+	CFLAGS = $(CFLAGS_COMMON) -O3 -flto -march=native
 else ifeq ($(BUILD),coverage)
 	CFLAGS = $(CFLAGS_COMMON) -Og -g -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -fprofile-instr-generate -fcoverage-mapping
 else
@@ -60,20 +60,18 @@ LIB_OBJ = $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(LIB_SRC))
 MAIN_TARGET = $(BIN_DIR)/$(EXECUTABLE)
 TEST_TARGETS = $(patsubst $(TEST_DIR)/%.c,$(TEST_BIN_DIR)/%,$(TEST_SRC))
 BENCH_TARGETS = $(patsubst $(BENCH_DIR)/%.c,$(BENCH_BIN_DIR)/%,$(BENCH_SRC))
-$(info $$BENCH_DIR = $(BENCH_DIR))
-$(info $$BENCH_SRC = $(BENCH_SRC))
-$(info $$BENCH_TARGETS = $(BENCH_TARGETS))
 ifeq ($(OS),Windows_NT)
-	LDLIBS = -Wl,/subsystem:console
-	MAIN_TARGET = $(MAIN_TARGET).exe
+#	LDLIBS = -Wl,/subsystem:console
+	CFLAGS += -D_CRT_SECURE_NO_WARNINGS
+	MAIN_TARGET := $(MAIN_TARGET).exe
 
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Linux)
-		LDLIBS =
+		LDLIBS = -lm
 	endif
 	ifeq ($(UNAME_S),Darwin)
-		LDLIBS = 
+		LDLIBS = -lm
 	endif
 endif
 
