@@ -111,6 +111,16 @@ static void blackenObject(Obj *object) {
             markTable(&instance->fields);
             break;
         }
+        case OBJ_LIST: {
+            ObjList *list = (ObjList *) object;
+            markArray(&list->elements);
+            break;
+        }
+        case OBJ_MAP: {
+            ObjMap *map = (ObjMap *) object;
+            markTable(&map->table);
+            break;
+        }
         case OBJ_UPVALUE: markValue(((ObjUpvalue *) object)->closed); break;
         case OBJ_NATIVE:
         case OBJ_STRING: break;
@@ -149,11 +159,22 @@ void freeObject(Obj *object) {
             FREE(ObjFunction, object);
             break;
         }
-
         case OBJ_INSTANCE: {
             ObjInstance *instance = (ObjInstance *) object;
             freeTable(&instance->fields);
             FREE(ObjInstance, object);
+            break;
+        }
+        case OBJ_LIST: {
+            ObjList *list = (ObjList *) object;
+            freeValueArray(&list->elements);
+            FREE(ObjList, object);
+            break;
+        }
+        case OBJ_MAP: {
+            ObjMap *map = (ObjMap *) object;
+            freeTable(&map->table);
+            FREE(ObjMap, object);
             break;
         }
         case OBJ_NATIVE: {

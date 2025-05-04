@@ -17,6 +17,8 @@
 VM vm;
 
 static void nativeError(const char *format, ...);
+static void defineNativeMethod(ObjClass *class, const char *name, NativeFn fn);
+static void runtimeError(const char *format, ...);
 
 static Value printLoxValue(int argCount, Value *args) {
     for (int i = 0; i < argCount; i++) {
@@ -50,6 +52,76 @@ static void resetStack() {
     vm.stackTop = vm.stack;
     vm.frameCount = 0;
     vm.openUpvalues = nullptr;
+}
+
+static bool checkIndexBounds(const char *type, int bounds, Value indexValue) {
+    if (!IS_NUMBER(indexValue)) {
+        runtimeError("%s must be a number.", type);
+        return false;
+    }
+    double indexNum = AS_NUMBER(indexValue);
+    if (indexNum < 0 || indexNum >= (double) bounds) {
+        runtimeError("%s (%g) out of bounds (%d)", type, indexNum, bounds);
+        return false;
+    }
+    if ((double) (int) indexNum != indexNum) {
+        runtimeError("%s (%g) must be a whole number.", type, indexNum);
+        return false;
+    }
+    return true;
+}
+
+static bool checkListIndex(Value listValue, Value indexValue) {
+    ObjList *list = AS_LIST(listValue);
+    return checkIndexBounds("List index", list->elements.count, indexValue);
+}
+
+static Value listPop(int argCount, Value *args) {
+    if (argCount != 0) {
+        nativeError("Expected 0 arguments.");
+    }
+    ObjList *list = AS_LIST(args[-1]);
+    if (list->elements.count == 0) {
+        runtimeError("Can't pop form empty list.");
+        return BOOL_VAL(false);
+    }
+    return removeValueArray(&list->elements, list->elements.count - 1);
+}
+
+static Value listPush(int argCount, Value *args) {
+    if (argCount != 1) {
+        nativeError("Expected 1 arguments, got %d", argCount);
+    }
+    ObjList *list = AS_LIST(args[-1]);
+    writeValueArray(&list->elements, args[0]);
+    return NIL_VAL;
+}
+
+static Value listInsert(int argCount, Value *args) {
+    if (argCount != 2) {
+        nativeError("expected 2 arguments, got %d", argCount);
+    }
+    if (!checkListIndex(args[-1], args[0])) {
+        nativeError("Invalid list.");
+    }
+
+    ObjList *list = AS_LIST(args[-1]);
+    int pos = (int) AS_NUMBER(args[0]);
+    insertValueArray(&list->elements, pos, args[1]);
+
+    return NIL_VAL;
+}
+
+static void initListClass() {
+    const char listStr[] = "(List)";
+    ObjString *listClassName = copyString(listStr, sizeof(listStr) - 1);
+    push(OBJ_VAL(listClassName));
+    vm.listClass = newClass(listClassName);
+    pop();
+
+    defineNativeMethod(vm.listClass, "insert", listInsert);
+    defineNativeMethod(vm.listClass, "push", listPush);
+    defineNativeMethod(vm.listClass, "pop", listPop);
 }
 
 static void nativeError(const char *format, ...) {
@@ -105,6 +177,16 @@ static void defineNative(const char *name, NativeFn function) {
     pop();
 }
 
+static void defineNativeMethod(ObjClass *class, const char *name, NativeFn fn) {
+    ObjString *str = copyString(name, (int) strlen(name));
+    push(OBJ_VAL(str));
+    ObjNative *native = newNative(fn);
+    push(OBJ_VAL(native));
+    tableSet(&class->methods, str, OBJ_VAL(native));
+    pop();
+    pop();
+}
+
 void initVM() {
     resetStack();
     vm.objects = nullptr;
@@ -113,11 +195,14 @@ void initVM() {
     vm.grayCount = 0;
     vm.grayCapacity = 0;
     vm.grayStack = nullptr;
+    vm.listClass = nullptr;
+    vm.mapClass = nullptr;
 
     initTable(&vm.globals);
     initTable(&vm.strings);
     vm.initString = nullptr;
     vm.initString = copyString("init", 4);
+    initListClass();
     defineNative("clock", timeNative);
     defineNative("wallClock", clockNative);
     defineNative("error", printErrNative);
@@ -409,6 +494,98 @@ static InterpretResult run() {
                 Value value = pop();
                 pop();
                 push(value);
+                break;
+            }
+            case OP_GET_INDEX: {
+                if (IS_LIST(peek(1))) {
+                    if (!checkListIndex(peek(1), peek(0))) {
+                        return INTERPRET_RUNTIME_ERROR;
+                    }
+                    int index = (int) AS_NUMBER(pop());
+                    ObjList *list = AS_LIST(pop());
+                    push(list->elements.values[index]);
+                    break;
+                } else if (IS_MAP(peek(1))) {
+                    if (!IS_STRING(peek(0))) {
+                        runtimeError("Maps can only be indexed be string.");
+                        return INTERPRET_RUNTIME_ERROR;
+                    }
+                    ObjString *key = AS_STRING(peek(0));
+                    ObjMap *map = AS_MAP(peek(1));
+                    Value value;
+                    if (tableGet(&map->table, key, &value)) {
+                        pop(); // key
+                        pop(); // map
+                        push(value);
+                        break;
+                    }
+                    runtimeError("Undefined key '%s'.", key->chars);
+                } else {
+                    runtimeError("Can only index lists or maps.");
+                }
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            case OP_SET_INDEX: {
+                if (IS_LIST(peek(2))) {
+                    if (!checkListIndex(peek(2), peek(1))) {
+                        return INTERPRET_RUNTIME_ERROR;
+                    }
+                    Value value = pop();
+                    int index = (int) AS_NUMBER(pop());
+                    ObjList *list = AS_LIST(pop());
+                    list->elements.values[index] = value;
+                    push(value);
+                    break;
+                } else if (IS_MAP(peek(2))) {
+                    if (!IS_STRING(peek(1))) {
+                        runtimeError("Maps can only be indexed be string.");
+                        return INTERPRET_RUNTIME_ERROR;
+                    }
+                    ObjString *key = AS_STRING(peek(1));
+                    ObjMap *map = AS_MAP(peek(2));
+                    tableSet(&map->table, key, peek(0));
+                    Value value = pop();
+                    pop(); // key
+                    pop(); // map
+                    push(value);
+                    break;
+                } else {
+                    runtimeError("Can only set index of lists or maps.");
+                }
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            case OP_LIST_INIT: {
+                push(OBJ_VAL(newList()));
+                break;
+            }
+            case OP_LIST_DATA: {
+                if (!IS_LIST(peek(1))) {
+                    runtimeError("List data can only be added to a list.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                ObjList *list = AS_LIST(peek(1));
+                writeValueArray(&list->elements, peek(0));
+                pop();
+                break;
+            }
+            case OP_MAP_INIT: {
+                push(OBJ_VAL(newMap()));
+                break;
+            }
+            case OP_MAP_DATA: {
+                if (!IS_MAP(peek(2))) {
+                    runtimeError("Map data can only be added to a map.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                if (!IS_STRING(peek(1))) {
+                    runtimeError("Map key must be a string.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                ObjMap *map = AS_MAP(peek(2));
+                ObjString *key = AS_STRING(peek(1));
+                tableSet(&map->table, key, peek(0));
+                pop(); // Value
+                pop(); // Key
                 break;
             }
             case OP_GET_SUPER: {

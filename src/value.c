@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -11,16 +12,38 @@ void initValueArray(ValueArray *array) {
     array->count = 0;
 }
 
-void writeValueArray(ValueArray *array, Value value) {
+static void ensureNewSpace(ValueArray *array) {
     if (array->capacity < array->count + 1) {
         int oldCapacity = array->capacity;
         array->capacity = GROW_CAPACITY(oldCapacity);
         array->values =
             GROW_ARRAY(Value, array->values, oldCapacity, array->capacity);
     }
+}
+
+void writeValueArray(ValueArray *array, Value value) {
+    ensureNewSpace(array);
 
     array->values[array->count] = value;
     array->count++;
+}
+
+void insertValueArray(ValueArray *array, int pos, Value value) {
+    assert(pos >= 0 && pos < array->count);
+    ensureNewSpace(array);
+    memmove(array->values + pos + 1, array->values + pos,
+            (array->count - pos) * sizeof(Value));
+    array->values[pos] = value;
+    array->count++;
+}
+
+Value removeValueArray(ValueArray *array, int pos) {
+    assert(pos >= 0 && pos < array->count);
+    Value value = array->values[pos];
+    memmove(array->values + pos, array->values + pos + 1,
+            (array->count - pos - 1) * sizeof(Value));
+    array->count--;
+    return value;
 }
 
 void printValue(Value value) {
@@ -30,7 +53,7 @@ void printValue(Value value) {
         case VAL_NUMBER: {
             double num = AS_NUMBER(value);
             if (num == (int) num) {
-                printf("%d", (int)num);
+                printf("%d", (int) num);
             } else {
                 printf("%g", num);
             }

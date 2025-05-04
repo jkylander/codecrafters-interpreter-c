@@ -25,6 +25,9 @@ typedef struct {
     ObjString *initString;
     Table globals;
     ObjUpvalue *openUpvalues;
+
+    ObjClass *listClass;
+    ObjClass *mapClass;
     size_t bytesAllocated;
     size_t nextGC;
     Obj *objects;

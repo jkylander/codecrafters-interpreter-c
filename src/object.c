@@ -120,9 +120,34 @@ void printObject(Value value) {
         case OBJ_INSTANCE:
             printf("%s instance", AS_INSTANCE(value)->class->name->chars);
             break;
+        case OBJ_LIST: {
+            ObjList *list = AS_LIST(value);
+            putc('[', stdout);
+            if (list->elements.count > 0) {
+                printValue(list->elements.values[0]);
+            }
+            for (int i = 1; i < list->elements.count; i++) {
+                printf(", ");
+                printValue(list->elements.values[i]);
+            }
+            putc(']', stdout);
+        }
+        case OBJ_MAP: break;
         case OBJ_NATIVE: printf("<native fn>"); break;
         case OBJ_STRING: printf("%s", AS_CSTRING(value)); break;
     }
+}
+
+ObjMap *newMap() {
+    ObjMap *map = ALLOCATE_OBJ(ObjMap, OBJ_MAP);
+    initTable(&map->table);
+    return map;
+}
+
+ObjList *newList() {
+    ObjList *list = ALLOCATE_OBJ(ObjList, OBJ_LIST);
+    initValueArray(&list->elements);
+    return list;
 }
 
 ObjFunction *newFunction() {

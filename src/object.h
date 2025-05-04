@@ -13,6 +13,8 @@
 #define IS_CLOSURE(value) isObjType((value), OBJ_CLOSURE)
 #define IS_FUNCTION(value) isObjType((value), OBJ_FUNCTION)
 #define IS_INSTANCE(value) isObjType((value), OBJ_INSTANCE)
+#define IS_LIST(value) isObjType((value), OBJ_LIST)
+#define IS_MAP(value) isObjType((value), OBJ_MAP)
 #define IS_NATIVE(value) isObjType((value), OBJ_NATIVE)
 #define IS_STRING(value) isObjType((value), OBJ_STRING)
 
@@ -20,7 +22,9 @@
 #define AS_CLASS(value) ((ObjClass *) AS_OBJ(value))
 #define AS_CLOSURE(value) ((ObjClosure *) AS_OBJ(value))
 #define AS_FUNCTION(value) ((ObjFunction *) AS_OBJ(value))
+#define AS_LIST(value) ((ObjList *) AS_OBJ(value))
 #define AS_INSTANCE(value) ((ObjInstance *) AS_OBJ(value))
+#define AS_MAP(value) ((ObjMap *) AS_OBJ(value))
 #define AS_NATIVE(value) (((ObjNative *) AS_OBJ(value))->function)
 #define AS_STRING(value) ((ObjString *) AS_OBJ(value))
 #define AS_CSTRING(value) (((ObjString *) AS_OBJ(value))->chars)
@@ -32,6 +36,8 @@
     X(OBJ_UPVALUE)                                                             \
     X(OBJ_FUNCTION)                                                            \
     X(OBJ_INSTANCE)                                                            \
+    X(OBJ_LIST)                                                                \
+    X(OBJ_MAP)                                                                 \
     X(OBJ_NATIVE)                                                              \
     X(OBJ_STRING)
 
@@ -101,6 +107,18 @@ typedef struct {
     ObjClosure *method;
 } ObjBoundMethod;
 
+typedef struct {
+    Obj obj;
+    ValueArray elements;
+} ObjList;
+
+typedef struct {
+    Obj obj;
+    Table table;
+} ObjMap;
+
+ObjList *newList();
+ObjMap *newMap();
 ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method);
 ObjInstance *newInstance(ObjClass *class);
 ObjClass *newClass(ObjString *name);

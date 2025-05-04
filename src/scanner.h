@@ -3,8 +3,11 @@
 
 #define TOKEN_KINDS                                                            \
     TOKEN_KIND(TOKEN_ERROR, "ERROR")                                           \
+    TOKEN_KIND(TOKEN_COLON, "COLON")                                           \
     TOKEN_KIND(TOKEN_LEFT_PAREN, "LEFT_PAREN")                                 \
     TOKEN_KIND(TOKEN_RIGHT_PAREN, "RIGHT_PAREN")                               \
+    TOKEN_KIND(TOKEN_LEFT_SQUARE, "LEFT_SQUARE")                               \
+    TOKEN_KIND(TOKEN_RIGHT_SQUARE, "RIGHT_SQUARE")                             \
     TOKEN_KIND(TOKEN_LEFT_BRACE, "LEFT_BRACE")                                 \
     TOKEN_KIND(TOKEN_RIGHT_BRACE, "RIGHT_BRACE")                               \
     TOKEN_KIND(TOKEN_COMMA, "COMMA")                                           \

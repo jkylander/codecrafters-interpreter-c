@@ -1,4 +1,3 @@
-#define _POSIX_C_SOURCE 200809L
 #include "compiler.h"
 #include "scanner.h"
 #include "vm.h"
@@ -39,15 +38,19 @@ int main(int argc, char *argv[]) {
         char *source = read_file_contents(argv[2]);
         InterpretResult result = evaluate(source);
         free(source);
-        if (result == INTERPRET_COMPILE_ERROR) exit(65);
-        if (result == INTERPRET_RUNTIME_ERROR) exit(70);
+        if (result == INTERPRET_COMPILE_ERROR)
+            exit(65);
+        if (result == INTERPRET_RUNTIME_ERROR)
+            exit(70);
 
     } else if (strcmp(command, "run") == 0) {
         char *source = read_file_contents(argv[2]);
         InterpretResult result = interpret(source);
         free(source);
-        if (result == INTERPRET_COMPILE_ERROR) exit(65);
-        if (result == INTERPRET_RUNTIME_ERROR) exit(70);
+        if (result == INTERPRET_COMPILE_ERROR)
+            exit(65);
+        if (result == INTERPRET_RUNTIME_ERROR)
+            exit(70);
     } else {
         fprintf(stderr, "Unknown command: %s\n", command);
         return 1;
@@ -57,35 +60,34 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+
 char *read_file_contents(const char *filename) {
-    FILE *file;
-    if (strcmp(filename, "-") == 0) {
-        file = stdin;
-    } else {
-        file = fopen(filename, "rb");
-        if (file == nullptr) {
-            fprintf(stderr, "Could not open file: %s\n", filename);
-            exit(74);
+    FILE *f = fopen(filename, "rb");
+
+    if (f == nullptr) {
+        fprintf(stderr, "Could not open file: %s\n", filename);
+        exit(74);
+    }
+    if (fseek(f, 0, SEEK_END) < 0)
+        return nullptr;
+    size_t fsize = ftell(f);
+    if (fsize < 0)
+        return nullptr;
+    rewind(f);
+    char *s = malloc(fsize + 1);
+    if (s == nullptr)
+        return nullptr;
+    size_t read_size = fread(s, 1, fsize, f);
+    if (read_size != fsize)
+        return nullptr;
+    s[fsize] = '\0';
+
+    if (f != stdin) {
+        int fc = fclose(f);
+        if (fc != 0) {
+            perror("File close failed\n.");
+            return nullptr;
         }
     }
-    char *buf;
-    size_t buflen;
-    FILE *out = open_memstream(&buf, &buflen);
-    for (;;) {
-        char buf2[4096];
-        size_t n = fread(buf2, 1, sizeof(buf2), file);
-        if (n == 0) {
-            break;
-        }
-        fwrite(buf2, 1, n, out);
-    }
-
-    if (file != stdin) {
-        fclose(file);
-    }
-    fflush(out);
-    fclose(out);
-    buf[buflen] = '\0';
-
-    return buf;
+    return s;
 }

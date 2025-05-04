@@ -640,7 +640,7 @@ static void namedVariable(Token name, bool canAssign);
 static Token syntheticToken(const char *text) {
     Token token;
     token.start = text;
-    token.length = (int)strlen(text);
+    token.length = (int) strlen(text);
     return token;
 }
 
@@ -891,6 +891,53 @@ static void statement() {
     }
 }
 
+static void index(bool canAssign) {
+    expression();
+    consume(TOKEN_RIGHT_SQUARE, "Expect ']' after expression.");
+
+    if (canAssign && match(TOKEN_EQUAL)) {
+        expression();
+        emitByte(OP_SET_INDEX);
+    } else {
+        emitByte(OP_GET_INDEX);
+    }
+}
+
+static void list(bool canAssign) {
+    (void) canAssign;
+    emitByte(OP_LIST_INIT);
+    do {
+        if (check(TOKEN_RIGHT_SQUARE)) {
+            break;
+        }
+        expression();
+        emitByte(OP_LIST_DATA);
+    } while (match(TOKEN_COMMA));
+    consume(TOKEN_RIGHT_SQUARE, "Expect ']' after list.");
+}
+
+static void map(bool canAssign) {
+    (void) canAssign;
+    emitByte(OP_MAP_INIT);
+    do {
+        if (check(TOKEN_RIGHT_BRACE)) {
+            break;
+        }
+        if (match(TOKEN_LEFT_SQUARE)) {
+            expression();
+            consume(TOKEN_RIGHT_SQUARE, "Expect ']' after expression.");
+        } else {
+            consume(TOKEN_IDENTIFIER, "Expect identifier or '['.");
+            uint8_t constant = identifierConstant(&parser.previous);
+            emitBytes(OP_CONSTANT, constant);
+        }
+        consume(TOKEN_COLON, "Expect ':' after map key.");
+        expression();
+        emitByte(OP_MAP_DATA);
+    } while (match(TOKEN_COMMA));
+    consume(TOKEN_RIGHT_BRACE, "Expect '}' after map.");
+}
+
 static void grouping(bool canAssign) {
     (void) canAssign;
     expression();
@@ -973,8 +1020,10 @@ static void unary(bool canAssign) {
 ParseRule rules[] = {
   [TOKEN_LEFT_PAREN]    = {grouping,    call,      PREC_CALL},
   [TOKEN_RIGHT_PAREN]   = {nullptr,     nullptr,   PREC_NONE},
-  [TOKEN_LEFT_BRACE]    = {nullptr,     nullptr,   PREC_NONE}, 
+  [TOKEN_LEFT_BRACE]    = {map,         nullptr,   PREC_NONE}, 
   [TOKEN_RIGHT_BRACE]   = {nullptr,     nullptr,   PREC_NONE},
+  [TOKEN_LEFT_SQUARE]   = {list,        index,     PREC_CALL}, 
+  [TOKEN_RIGHT_SQUARE]  = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_COMMA]         = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_DOT]           = {nullptr,     dot,       PREC_CALL},
   [TOKEN_MINUS]         = {unary,       binary,    PREC_TERM},

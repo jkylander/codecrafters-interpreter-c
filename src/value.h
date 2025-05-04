@@ -43,6 +43,8 @@ typedef struct {
 
 void initValueArray(ValueArray *array);
 void writeValueArray(ValueArray *array, Value value);
+Value removeValueArray(ValueArray *array, int pos);
+void insertValueArray(ValueArray *array, int pos, Value value);
 void freeValueArray(ValueArray *array);
 void printValue(Value value);
 bool valuesEqual(Value a, Value b);
