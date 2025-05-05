@@ -55,3 +55,4 @@ build
 coverage
 vcpkg_installed
 .clang*
+*.trace
