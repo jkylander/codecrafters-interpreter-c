@@ -1,0 +1,5 @@
+CompileFlags:
+  Add: [-xc, -Wall, -DDEBUG, -std=c23, -Wno-deprecated-declarations]
+
+Diagnostics:
+  UnusedIncludes: None

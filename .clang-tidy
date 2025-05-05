@@ -1,0 +1,37 @@
+---
+Checks: '
+-bugprone-*,
+-cert-msc24-c*,
+-cert-env33-c,
+-cert-err33-c,
+-cert-msc
+clang-analyzer-*,
+-clang-analyzer-security,
+concurrency-*,
+-concurrency-mt-unsafe,
+misc-*,
+performance-*,
+readability-misleading-indentation,
+readability-misplaced-array-index,
+readability-non-const-parameter,
+readability-redundant-*,
+readability-simplify-*,
+-modernize-deprecated-headers,
+-*-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+# -*-easily-swappable-parameters,
+-*-no-recursion,
+-*-use-nullptr,
+-*-use-anonymous-namespace,
+-*-include-cleaner,
+-*-multi-level-implicit-pointer-conversion,
+'
+HeaderFilterRegex: 'catch.hpp'
+FormatStyle: 'file'
+CheckOptions:
+  - key: readability-function-size.LineThreshold
+    value: '200'
+  - key: readability-function-size.ParameterThreshold
+    value: '16'
+  - key: readability-function-size.StatementThreshold
+    value: '400'
+...
