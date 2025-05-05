@@ -82,6 +82,7 @@ Compiler *current = nullptr;
 ClassCompiler *currentClass = nullptr;
 Chunk *compilingChunk;
 
+#if 0
 typedef enum {
     EX_ASSIGN,
     EX_BINARY,
@@ -226,6 +227,7 @@ void print_ast(Expr *expr) {
         }
     }
 }
+#endif
 
 static Chunk *currentChunk() { return &current->function->chunk; }
 
@@ -1095,7 +1097,7 @@ static bool match(TokenType type) {
     advance();
     return true;
 }
-
+#if 0
 static Expr *equality();
 Expr *parse_expression() { return equality(); }
 
@@ -1196,6 +1198,7 @@ Expr *parse(const char *source) {
     advance();
     return equality();
 }
+#endif
 
 bool hadError() { return parser.hadError; }
 
