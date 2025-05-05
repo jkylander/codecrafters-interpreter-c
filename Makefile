@@ -5,7 +5,7 @@ CFLAGS_COMMON += -Wno-unused-command-line-argument
 DEPFLAGS = -MMD -MP
 EXECUTABLE = interpreter
 CLI_ARGS = run
-INPUT_FILE = map.lox
+INPUT_FILE = tests/map.lox
 
 # Build modes
 ifeq ($(BUILD),)
@@ -14,7 +14,7 @@ ifeq ($(BUILD),)
 endif
 
 ifeq ($(BUILD),debug)
-	CFLAGS = $(CFLAGS_COMMON) -g -Og -DDEBUG #-fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
+	CFLAGS = $(CFLAGS_COMMON) -g -Og -DDEBUG -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
 else ifeq ($(BUILD),release)
 	CFLAGS = $(CFLAGS_COMMON) -O3 -flto -march=native
 else ifeq ($(BUILD),coverage)

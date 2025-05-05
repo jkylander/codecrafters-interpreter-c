@@ -26,12 +26,12 @@ int main(int argc, char *argv[]) {
         free(source);
         return hadError ? 65 : 0;
     } else if (strcmp(command, "parse") == 0) {
- //       char *source = read_file_contents(argv[2]);
-//        Expr *ast = parse(source);
+        char *source = read_file_contents(argv[2]);
+        Expr *ast = parse(source);
         if (hadError()) {
             return 65;
         }
- //       print_ast(ast);
+        print_ast(ast);
         printf("\n");
 
     } else if (strcmp(command, "evaluate") == 0) {
@@ -60,7 +60,6 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-
 char *read_file_contents(const char *filename) {
     FILE *f = fopen(filename, "rb");
 
@@ -70,15 +69,15 @@ char *read_file_contents(const char *filename) {
     }
     if (fseek(f, 0, SEEK_END) < 0)
         return nullptr;
-    size_t fsize = ftell(f);
+    long fsize = ftell(f);
     if (fsize < 0)
         return nullptr;
     rewind(f);
     char *s = malloc(fsize + 1);
     if (s == nullptr)
         return nullptr;
-    size_t read_size = fread(s, 1, fsize, f);
-    if (read_size != fsize)
+    unsigned long read_size = fread(s, 1, fsize, f);
+    if (read_size != (unsigned long) fsize)
         return nullptr;
     s[fsize] = '\0';
 

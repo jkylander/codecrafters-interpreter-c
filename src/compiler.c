@@ -82,7 +82,6 @@ Compiler *current = nullptr;
 ClassCompiler *currentClass = nullptr;
 Chunk *compilingChunk;
 
-#if 0
 typedef enum {
     EX_ASSIGN,
     EX_BINARY,
@@ -139,7 +138,20 @@ static Expr *create_literal_expr(Token token) {
     expr->type = EX_LITERAL;
     Value *v = malloc(sizeof(Value));
 
+#ifdef NAN_BOXING
     if (token.type == TOKEN_NUMBER) {
+        *v = strtod(token.start, nullptr);
+    } else if (token.type == TOKEN_NIL) {
+        *v = NIL_VAL;
+    } else if (token.type == TOKEN_TRUE) {
+        *v = TRUE_VAL;
+    } else if (token.type == TOKEN_FALSE) {
+        *v = FALSE_VAL;
+    } else {
+    }
+#else
+    if (token.type == TOKEN_NUMBER) {
+
         v->type = VAL_NUMBER;
         v->as.number = strtod(token.start, NULL);
     } else if (token.type == TOKEN_NIL) {
@@ -153,6 +165,7 @@ static Expr *create_literal_expr(Token token) {
         ObjString *s = copyString(token.start + 1, token.length - 2);
         v->as.obj = (Obj *) s;
     }
+#endif
 
     expr->as.literal.value = v;
     expr->line = token.line;
@@ -185,6 +198,48 @@ void free_expr(Expr *expr) {
 void print_ast(Expr *expr) {
     if (parser.panicMode)
         return;
+#ifdef NAN_BOXING
+    // FIXME: Printing numbers
+    if (expr != NULL) {
+        if (expr->type == EX_LITERAL) {
+            Value v = *expr->as.literal.value;
+             if (IS_BOOL(v)) {
+                printf("%s", AS_BOOL(v) ? "true" : "false");
+
+            } else if (IS_NIL(v)) {
+                printf("nil");
+
+            } else if (IS_NUMBER(v)) {
+                double value = AS_NUMBER(v);
+                if (value == (int) value) {
+                    printf("%.1f", value);
+                } else {
+                    printf("%.*f", count_decimals(value), value);
+                }
+            } else {
+                Value v = *expr->as.literal.value;
+                printf("%s", AS_CSTRING(v));
+            }
+        } else if (expr->type == EX_BINARY) {
+            printf("(%.*s ", expr->as.binary.operator.length,
+                   expr->as.binary.operator.start);
+            print_ast(expr->as.binary.left);
+            printf(" ");
+            print_ast(expr->as.binary.right);
+            printf(")");
+        } else if (expr->type == EX_GROUPING) {
+            printf("(group ");
+            print_ast(expr->as.grouping.expression);
+            printf(")");
+        } else if (expr->type == EX_UNARY) {
+            printf("(%.*s ", expr->as.unary.operator.length,
+                   expr->as.unary.operator.start);
+            print_ast(expr->as.unary.right);
+            printf(")");
+        }
+    }
+
+#else
     if (expr != NULL) {
         if (expr->type == EX_LITERAL) {
             if (expr->as.literal.value->type == VAL_OBJ) {
@@ -226,8 +281,9 @@ void print_ast(Expr *expr) {
             printf(")");
         }
     }
-}
+
 #endif
+}
 
 static Chunk *currentChunk() { return &current->function->chunk; }
 
@@ -1097,7 +1153,6 @@ static bool match(TokenType type) {
     advance();
     return true;
 }
-#if 0
 static Expr *equality();
 Expr *parse_expression() { return equality(); }
 
@@ -1198,7 +1253,6 @@ Expr *parse(const char *source) {
     advance();
     return equality();
 }
-#endif
 
 bool hadError() { return parser.hadError; }
 
