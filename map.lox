@@ -1,3 +1,5 @@
 var m = {a : 1, b : "s"};
 
 printf("map: ", m);
+m.remove("b");
+printf("map: ", m);
