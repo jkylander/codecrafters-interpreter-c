@@ -77,9 +77,61 @@ static bool checkListIndex(Value listValue, Value indexValue) {
     return checkIndexBounds("List index", list->elements.count, indexValue);
 }
 
+static Value mapCount(int argCount, Value *args) {
+    if (argCount != 0) {
+        nativeError("Expected 0 arguments, got %d", argCount);
+    }
+    ObjMap *map = AS_MAP(args[-1]);
+    int count = 0;
+    for (int i = 0; i < map->table.capacity; i++) {
+        count += !!(map->table.entries[i].key);
+    }
+    return NUMBER_VAL((double) count);
+}
+
+static Value mapHas(int argCount, Value *args) {
+    if (argCount != 1) {
+        nativeError("Expected 1 argument, got %d", argCount);
+    }
+    if (!IS_STRING(args[0])) {
+        nativeError("Maps can only be indexed by string.");
+    }
+
+    ObjMap *map = AS_MAP(args[-1]);
+    ObjString *key = AS_STRING(args[0]);
+    Value value;
+    return BOOL_VAL(tableGet(&map->table, key, &value));
+}
+
+static Value mapRemove(int argCount, Value *args) {
+    if (argCount != 1) {
+        nativeError("Expected 1 arguments, got %d", argCount);
+    }
+    if (!IS_STRING(args[0])) {
+        nativeError("Maps can only be indexed by string.");
+    }
+
+    ObjMap *map = AS_MAP(args[-1]);
+    ObjString *key = AS_STRING(args[0]);
+
+    return BOOL_VAL(tableDelete(&map->table, key));
+}
+
+static void initMapClass() {
+    const char mapStr[] = "(Map)";
+    ObjString *mapClassName = copyString(mapStr, sizeof(mapStr) - 1);
+    push(OBJ_VAL(mapClassName));
+    vm.mapClass = newClass(mapClassName);
+    pop();
+
+    defineNativeMethod(vm.mapClass, "count", mapCount);
+    defineNativeMethod(vm.mapClass, "has", mapHas);
+    defineNativeMethod(vm.mapClass, "remove", mapRemove);
+}
+
 static Value listPop(int argCount, Value *args) {
     if (argCount != 0) {
-        nativeError("Expected 0 arguments.");
+        nativeError("Expected 0 arguments, got %d", argCount);
     }
     ObjList *list = AS_LIST(args[-1]);
     if (list->elements.count == 0) {
@@ -113,6 +165,26 @@ static Value listInsert(int argCount, Value *args) {
     return NIL_VAL;
 }
 
+static Value listSize(int argCount, Value *args) {
+    if (argCount != 0) {
+        nativeError("Expected 0 arguments, got %d", argCount);
+    }
+    ObjList *list = AS_LIST(args[-1]);
+    return NUMBER_VAL((double) list->elements.count);
+}
+
+static Value listRemove(int argCount, Value *args) {
+    if (argCount != 1) {
+        nativeError("Expected 1 arguments, got %d", argCount);
+    }
+    if (!checkListIndex(args[-1], args[0])) {
+        nativeError("Invalid list.");
+    }
+    ObjList *list = AS_LIST(args[-1]);
+    int pos = (int) AS_NUMBER(args[0]);
+    return removeValueArray(&list->elements, pos);
+}
+
 static void initListClass() {
     const char listStr[] = "(List)";
     ObjString *listClassName = copyString(listStr, sizeof(listStr) - 1);
@@ -123,6 +195,8 @@ static void initListClass() {
     defineNativeMethod(vm.listClass, "insert", listInsert);
     defineNativeMethod(vm.listClass, "push", listPush);
     defineNativeMethod(vm.listClass, "pop", listPop);
+    defineNativeMethod(vm.listClass, "size", listSize);
+    defineNativeMethod(vm.listClass, "remove", listRemove);
 }
 
 static void nativeError(const char *format, ...) {
@@ -204,6 +278,7 @@ void initVM() {
     vm.initString = nullptr;
     vm.initString = copyString("init", 4);
     initListClass();
+    initMapClass();
     defineNative("clock", timeNative);
     defineNative("wallClock", clockNative);
     defineNative("error", printErrNative);
