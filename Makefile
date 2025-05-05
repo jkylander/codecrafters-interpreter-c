@@ -1,6 +1,6 @@
 # Compiler and flags
 CC = clang
-CFLAGS_COMMON = -Wall -Wextra -std=c23
+CFLAGS_COMMON = -Wall -Werror -Wextra -Wsign-compare -std=c23
 CFLAGS_COMMON += -Wno-unused-command-line-argument
 DEPFLAGS = -MMD -MP
 EXECUTABLE = interpreter
