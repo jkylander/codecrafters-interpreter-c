@@ -1,9 +1,7 @@
 #include "../src/vm.h"
 
-#include <assert.h>
-#include <stdio.h>
-
 #include "ubench.h"
+#include <assert.h>
 
 UBENCH_EX(Bench, Zoo) {
     VM vm;
