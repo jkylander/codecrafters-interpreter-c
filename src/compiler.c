@@ -85,17 +85,9 @@ Chunk *compilingChunk;
 typedef enum {
     EX_ASSIGN,
     EX_BINARY,
-    EX_CALL,
-    EX_GET,
     EX_GROUPING,
     EX_LITERAL,
-    EX_LOGICAL,
-    EX_SET,
-    EX_SUPER,
-    EX_THIS,
     EX_UNARY,
-    EX_VARIABLE,
-
     EX_EXPR_COUNT
 } ExprType;
 
@@ -140,7 +132,7 @@ static Expr *create_literal_expr(Token token) {
 
 #ifdef NAN_BOXING
     if (token.type == TOKEN_NUMBER) {
-        *v = strtod(token.start, nullptr);
+        *v = NUMBER_VAL(strtod(token.start, nullptr));
     } else if (token.type == TOKEN_NIL) {
         *v = NIL_VAL;
     } else if (token.type == TOKEN_TRUE) {
@@ -188,22 +180,28 @@ void free_expr(Expr *expr) {
             free_expr(expr->as.binary.left);
             free_expr(expr->as.binary.right);
             break;
-        case EX_GROUPING: free_expr(expr->as.grouping.expression); break;
-        case EX_UNARY: free_expr(expr->as.unary.right); break;
-        case EX_LITERAL: break;
+        case EX_GROUPING:
+            free_expr(expr->as.grouping.expression);
+            break;
+        case EX_UNARY:
+            free_expr(expr->as.unary.right);
+            break;
+        case EX_LITERAL:
+            free(expr->as.literal.value);
+            break;
         default: break;
     }
+    free(expr);
 }
 
 void print_ast(Expr *expr) {
     if (parser.panicMode)
         return;
 #ifdef NAN_BOXING
-    // FIXME: Printing numbers
     if (expr != NULL) {
         if (expr->type == EX_LITERAL) {
             Value v = *expr->as.literal.value;
-             if (IS_BOOL(v)) {
+            if (IS_BOOL(v)) {
                 printf("%s", AS_BOOL(v) ? "true" : "false");
 
             } else if (IS_NIL(v)) {

@@ -33,6 +33,8 @@ int main(int argc, char *argv[]) {
         }
         print_ast(ast);
         printf("\n");
+        free_expr(ast);
+        free(source);
 
     } else if (strcmp(command, "evaluate") == 0) {
         char *source = read_file_contents(argv[2]);
