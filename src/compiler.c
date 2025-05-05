@@ -891,7 +891,7 @@ static void statement() {
     }
 }
 
-static void index(bool canAssign) {
+static void index_(bool canAssign) {
     expression();
     consume(TOKEN_RIGHT_SQUARE, "Expect ']' after expression.");
 
@@ -1022,7 +1022,7 @@ ParseRule rules[] = {
   [TOKEN_RIGHT_PAREN]   = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_LEFT_BRACE]    = {map,         nullptr,   PREC_NONE}, 
   [TOKEN_RIGHT_BRACE]   = {nullptr,     nullptr,   PREC_NONE},
-  [TOKEN_LEFT_SQUARE]   = {list,        index,     PREC_CALL}, 
+  [TOKEN_LEFT_SQUARE]   = {list,        index_,    PREC_CALL}, 
   [TOKEN_RIGHT_SQUARE]  = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_COMMA]         = {nullptr,     nullptr,   PREC_NONE},
   [TOKEN_DOT]           = {nullptr,     dot,       PREC_CALL},
