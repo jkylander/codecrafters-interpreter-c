@@ -67,3 +67,8 @@ class B < A {
 class C < B {}
 
 C().test();
+
+var D = [C, B];
+
+D[0]().test();
+D[0]().test();
