@@ -21,15 +21,15 @@ static void nativeError(const char *format, ...);
 static void defineNativeMethod(ObjClass *class, const char *name, NativeFn fn);
 static void runtimeError(const char *format, ...);
 
-static Value printLoxValue(int argCount, Value *args) {
+static Value printLoxValue(int argCount, const Value *args) {
     for (int i = 0; i < argCount; i++) {
-        printValue(args[i]);
+        printValue(vm.fout, args[i]);
     }
-    printf("\n");
+    fprintf(vm.fout, "\n");
     return BOOL_VAL(true);
 }
 
-static Value printErrNative(int argCount, Value *args) {
+static Value printErrNative(int argCount, const Value *args) {
     if (argCount != 1) {
         nativeError("Expected 1 argument but got %d", argCount);
     }
@@ -40,12 +40,12 @@ static Value printErrNative(int argCount, Value *args) {
     return BOOL_VAL(true);
 }
 
-static Value clockNative(int argCount, Value *args) {
+static Value clockNative(int argCount, const Value *args) {
     (void) argCount, (void) args;
     return NUMBER_VAL((double) clock() / CLOCKS_PER_SEC);
 }
 
-static Value timeNative(int argCount, Value *args) {
+static Value timeNative(int argCount, const Value *args) {
     (void) argCount, (void) args;
     return NUMBER_VAL((double) time(nullptr));
 }
@@ -77,7 +77,7 @@ static bool checkListIndex(Value listValue, Value indexValue) {
     return checkIndexBounds("List index", list->elements.count, indexValue);
 }
 
-static Value mapCount(int argCount, Value *args) {
+static Value mapCount(int argCount, const Value *args) {
     if (argCount != 0) {
         nativeError("Expected 0 arguments, got %d", argCount);
     }
@@ -89,7 +89,7 @@ static Value mapCount(int argCount, Value *args) {
     return NUMBER_VAL((double) count);
 }
 
-static Value mapHas(int argCount, Value *args) {
+static Value mapHas(int argCount, const Value *args) {
     if (argCount != 1) {
         nativeError("Expected 1 argument, got %d", argCount);
     }
@@ -103,7 +103,7 @@ static Value mapHas(int argCount, Value *args) {
     return BOOL_VAL(tableGet(&map->table, key, &value));
 }
 
-static Value mapRemove(int argCount, Value *args) {
+static Value mapRemove(int argCount, const Value *args) {
     if (argCount != 1) {
         nativeError("Expected 1 arguments, got %d", argCount);
     }
@@ -129,7 +129,7 @@ static void initMapClass() {
     defineNativeMethod(vm.mapClass, "remove", mapRemove);
 }
 
-static Value listPop(int argCount, Value *args) {
+static Value listPop(int argCount, const Value *args) {
     if (argCount != 0) {
         nativeError("Expected 0 arguments, got %d", argCount);
     }
@@ -141,7 +141,7 @@ static Value listPop(int argCount, Value *args) {
     return removeValueArray(&list->elements, list->elements.count - 1);
 }
 
-static Value listPush(int argCount, Value *args) {
+static Value listPush(int argCount, const Value *args) {
     if (argCount != 1) {
         nativeError("Expected 1 arguments, got %d", argCount);
     }
@@ -150,7 +150,7 @@ static Value listPush(int argCount, Value *args) {
     return NIL_VAL;
 }
 
-static Value listInsert(int argCount, Value *args) {
+static Value listInsert(int argCount, const Value *args) {
     if (argCount != 2) {
         nativeError("expected 2 arguments, got %d", argCount);
     }
@@ -165,7 +165,7 @@ static Value listInsert(int argCount, Value *args) {
     return NIL_VAL;
 }
 
-static Value listSize(int argCount, Value *args) {
+static Value listSize(int argCount, const Value *args) {
     if (argCount != 0) {
         nativeError("Expected 0 arguments, got %d", argCount);
     }
@@ -173,7 +173,7 @@ static Value listSize(int argCount, Value *args) {
     return NUMBER_VAL((double) list->elements.count);
 }
 
-static Value listRemove(int argCount, Value *args) {
+static Value listRemove(int argCount, const Value *args) {
     if (argCount != 1) {
         nativeError("Expected 1 arguments, got %d", argCount);
     }
@@ -202,19 +202,19 @@ static void initListClass() {
 static void nativeError(const char *format, ...) {
     va_list args;
     va_start(args, format);
-    vfprintf(stderr, format, args);
+    vfprintf(vm.ferr, format, args);
     va_end(args);
-    fputs("\n", stderr);
+    fputs("\n", vm.ferr);
 
     for (int i = vm.frameCount - 1; i >= 0; i--) {
         CallFrame *frame = &vm.frames[i];
         ObjFunction *function = frame->closure->function;
         size_t instruction = frame->ip - function->chunk.code - 1;
-        fprintf(stderr, "[line %d] in ", function->chunk.lines[instruction]);
+        fprintf(vm.ferr, "[line %d] in ", function->chunk.lines[instruction]);
         if (function->name == nullptr) {
-            fprintf(stderr, "script\n");
+            fprintf(vm.ferr, "script\n");
         } else {
-            fprintf(stderr, "%s()\n", function->name->chars);
+            fprintf(vm.ferr, "%s()\n", function->name->chars);
         }
     }
 
@@ -225,19 +225,19 @@ static void nativeError(const char *format, ...) {
 static void runtimeError(const char *format, ...) {
     va_list args;
     va_start(args, format);
-    vfprintf(stderr, format, args);
+    vfprintf(vm.ferr, format, args);
     va_end(args);
-    fputs("\n", stderr);
+    fputs("\n", vm.ferr);
 
     for (int i = vm.frameCount - 1; i >= 0; i--) {
         CallFrame *frame = &vm.frames[i];
         ObjFunction *function = frame->closure->function;
         size_t instruction = frame->ip - function->chunk.code - 1;
-        fprintf(stderr, "[line %d] in ", function->chunk.lines[instruction]);
+        fprintf(vm.ferr, "[line %d] in ", function->chunk.lines[instruction]);
         if (function->name == nullptr) {
-            fprintf(stderr, "script\n");
+            fprintf(vm.ferr, "script\n");
         } else {
-            fprintf(stderr, "%s()\n", function->name->chars);
+            fprintf(vm.ferr, "%s()\n", function->name->chars);
         }
     }
 
@@ -262,8 +262,10 @@ static void defineNativeMethod(ObjClass *class, const char *name, NativeFn fn) {
     pop();
 }
 
-void initVM() {
+void initVM(FILE *fout, FILE *ferr) {
     resetStack();
+    vm.fout = fout;
+    vm.ferr = ferr;
     vm.objects = nullptr;
     vm.bytesAllocated = 0;
     vm.nextGC = 1024 * 1024;
@@ -434,7 +436,7 @@ static ObjUpvalue *captureUpvalue(Value *local) {
     return createdUpvalue;
 }
 
-static void closeUpvalues(Value *last) {
+static void closeUpvalues(const Value *last) {
     while (vm.openUpvalues != nullptr && vm.openUpvalues->location >= last) {
         ObjUpvalue *upvalue = vm.openUpvalues;
         upvalue->closed = *upvalue->location;
@@ -492,13 +494,13 @@ static InterpretResult run() {
 
     for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
-        printf("         ");
+        fprintf(ferr, "         ");
         for (Value *slot = vm.stack; slot < vm.stackTop; slot++) {
-            printf("[ ");
+            fprintf(ferr, "[ ");
             printValue(*slot);
             printf(" ]");
         }
-        printf("\n");
+        fprintf(ferr, "\n");
         disassembleInstruction(
             &frame->closure->function->chunk,
             (int) (frame->ip - frame->closure->function->chunk.code));
@@ -728,8 +730,8 @@ static InterpretResult run() {
                 break;
             }
             case OP_PRINT: {
-                printValue(pop());
-                printf("\n");
+                printValue(vm.fout, pop());
+                fprintf(vm.fout, "\n");
                 break;
             }
             case OP_JUMP: {

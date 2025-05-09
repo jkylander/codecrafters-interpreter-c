@@ -61,7 +61,7 @@ typedef struct {
     ObjString *name;
 } ObjFunction;
 
-typedef Value (*NativeFn)(int argCount, Value *args);
+typedef Value (*NativeFn)(int argCount, const Value *args);
 
 typedef struct {
     Obj obj;
@@ -128,7 +128,7 @@ ObjNative *newNative(NativeFn function);
 ObjString *copyString(const char *chars, int length);
 ObjUpvalue *newUpvalue(Value *slot);
 ObjString *takeString(char *chars, int length);
-void printObject(Value value);
+void printObject(FILE *fout, Value value);
 
 static inline bool isObjType(Value value, ObjType type) {
     return IS_OBJ(value) && AS_OBJ(value)->type == type;

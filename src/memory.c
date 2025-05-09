@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "chunk.h"
@@ -266,4 +268,16 @@ void freeObjects() {
         object = next;
     }
     free(vm.grayStack);
+}
+
+void initFileStream(FileStream *fs) {
+#ifdef _WIN32
+#else
+    fs->fp = open_memstream(&fs->buf, &fs->size);
+#endif
+}
+
+void freeFileStream(FileStream *fs) {
+    fclose(fs->fp);
+    free(fs->buf);
 }

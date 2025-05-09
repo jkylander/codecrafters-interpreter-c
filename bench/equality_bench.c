@@ -31,7 +31,7 @@ UBENCH_EX(Bench, Equality) {
         "nil; \"str\" == true;"
         " }";
 
-    initVM();
+    initVM(stdout, stderr);
     UBENCH_DO_BENCHMARK() { ires = interpret(src); }
     assert(ires == INTERPRET_OK);
     freeVM();

@@ -6,6 +6,7 @@
 #include "object.h"
 #include "scanner.h"
 #include "value.h"
+#include "vm.h"
 #ifdef DEBUG_PRINT_CODE
 #include "debug.h"
 #endif
@@ -194,7 +195,7 @@ void free_expr(Expr *expr) {
     free(expr);
 }
 
-void print_ast(Expr *expr) {
+void print_ast(FILE *fout, Expr *expr) {
     if (parser.panicMode)
         return;
 #ifdef NAN_BOXING
@@ -202,38 +203,38 @@ void print_ast(Expr *expr) {
         if (expr->type == EX_LITERAL) {
             Value v = *expr->as.literal.value;
             if (IS_BOOL(v)) {
-                printf("%s", AS_BOOL(v) ? "true" : "false");
+                fprintf(fout, "%s", AS_BOOL(v) ? "true" : "false");
 
             } else if (IS_NIL(v)) {
-                printf("nil");
+                fprintf(fout, "nil");
 
             } else if (IS_NUMBER(v)) {
                 double value = AS_NUMBER(v);
                 if (value == (int) value) {
-                    printf("%.1f", value);
+                    fprintf(fout, "%.1f", value);
                 } else {
-                    printf("%.*f", count_decimals(value), value);
+                    fprintf(fout, "%.*f", count_decimals(value), value);
                 }
             } else {
                 Value v = *expr->as.literal.value;
-                printf("%s", AS_CSTRING(v));
+                fprintf(fout, "%s", AS_CSTRING(v));
             }
         } else if (expr->type == EX_BINARY) {
-            printf("(%.*s ", expr->as.binary.operator.length,
+            fprintf(fout, "(%.*s ", expr->as.binary.operator.length,
                    expr->as.binary.operator.start);
-            print_ast(expr->as.binary.left);
-            printf(" ");
-            print_ast(expr->as.binary.right);
-            printf(")");
+            print_ast(fout, expr->as.binary.left);
+            fprintf(fout, " ");
+            print_ast(fout, expr->as.binary.right);
+            fprintf(fout, ")");
         } else if (expr->type == EX_GROUPING) {
-            printf("(group ");
-            print_ast(expr->as.grouping.expression);
-            printf(")");
+            fprintf(fout, "(group ");
+            print_ast(fout, expr->as.grouping.expression);
+            fprintf(fout, ")");
         } else if (expr->type == EX_UNARY) {
-            printf("(%.*s ", expr->as.unary.operator.length,
+            fprintf(fout, "(%.*s ", expr->as.unary.operator.length,
                    expr->as.unary.operator.start);
-            print_ast(expr->as.unary.right);
-            printf(")");
+            print_ast(fout, expr->as.unary.right);
+            fprintf(fout, ")");
         }
     }
 
@@ -242,41 +243,41 @@ void print_ast(Expr *expr) {
         if (expr->type == EX_LITERAL) {
             if (expr->as.literal.value->type == VAL_OBJ) {
                 Value v = *expr->as.literal.value;
-                printf("%s", AS_CSTRING(v));
+                fprintf(fout, "%s", AS_CSTRING(v));
             } else if (expr->as.literal.value->type == VAL_BOOL) {
-                printf("%s", expr->as.literal.value->as.boolean == 1 ? "true"
+                fprintf(fout, "%s", expr->as.literal.value->as.boolean == 1 ? "true"
                                                                      : "false");
 
             } else if (expr->as.literal.value->type == VAL_NIL) {
-                printf("nil");
+                fprintf(fout, "nil");
 
             } else if (expr->as.literal.value->type == VAL_NUMBER) {
                 double value = expr->as.literal.value->as.number;
                 if (value == (int) value) {
-                    printf("%.1f", value);
+                    fprintf(fout, "%.1f", value);
                 } else {
-                    printf("%.*f", count_decimals(value), value);
+                    fprintf(fout, "%.*f", count_decimals(value), value);
                 }
             } else {
                 Value v = *expr->as.literal.value;
-                printf("%s", AS_CSTRING(v));
+                fprintf(fout, "%s", AS_CSTRING(v));
             }
         } else if (expr->type == EX_BINARY) {
-            printf("(%.*s ", expr->as.binary.operator.length,
+            fprintf(fout, "(%.*s ", expr->as.binary.operator.length,
                    expr->as.binary.operator.start);
             print_ast(expr->as.binary.left);
-            printf(" ");
+            fprintf(fout, " ");
             print_ast(expr->as.binary.right);
-            printf(")");
+            fprintf(fout, ")");
         } else if (expr->type == EX_GROUPING) {
-            printf("(group ");
+            fprintf(fout, "(group ");
             print_ast(expr->as.grouping.expression);
-            printf(")");
+            fprintf(fout, ")");
         } else if (expr->type == EX_UNARY) {
-            printf("(%.*s ", expr->as.unary.operator.length,
+            fprintf(fout, "(%.*s ", expr->as.unary.operator.length,
                    expr->as.unary.operator.start);
             print_ast(expr->as.unary.right);
-            printf(")");
+            fprintf(fout, ")");
         }
     }
 
@@ -289,17 +290,17 @@ static void errorAt(Token *token, const char *message) {
     if (parser.panicMode)
         return;
     parser.panicMode = true;
-    fprintf(stderr, "[line %d] Error", token->line);
+    fprintf(vm.ferr, "[line %d] Error", token->line);
 
     if (token->type == TOKEN_EOF) {
-        fprintf(stderr, " at end");
+        fprintf(vm.ferr, " at end");
     } else if (token->type == TOKEN_ERROR) {
         // nop
     } else {
-        fprintf(stderr, " at %.*s", token->length, token->start);
+        fprintf(vm.ferr, " at '%.*s'", token->length, token->start);
     }
 
-    fprintf(stderr, ": %s\n", message);
+    fprintf(vm.ferr, ": %s\n", message);
     parser.hadError = true;
 }
 

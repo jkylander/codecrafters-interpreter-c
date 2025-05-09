@@ -1,6 +1,7 @@
 #ifndef VALUE_H
 #define VALUE_H
 #include "common.h"
+#include <stdio.h>
 #include <string.h>
 
 typedef struct Obj Obj;
@@ -90,8 +91,8 @@ void writeValueArray(ValueArray *array, Value value);
 Value removeValueArray(ValueArray *array, int pos);
 void insertValueArray(ValueArray *array, int pos, Value value);
 void freeValueArray(ValueArray *array);
-void printValueC(Value value);
-void printValue(Value value);
+void printValueC(FILE *fout, Value value);
+void printValue(FILE *fout, Value value);
 bool valuesEqual(Value a, Value b);
 
 #endif /* VALUE_H */
