@@ -76,7 +76,7 @@ UBENCH_EX(Bench, BinaryTree) {
         "print \"elapsed:\";"
         "print clock() - start;"
     ;
-    initVM();
+    initVM(stdout, stderr);
     UBENCH_DO_BENCHMARK() { ires = interpret(src);}
     assert(ires == INTERPRET_OK);
     freeVM();

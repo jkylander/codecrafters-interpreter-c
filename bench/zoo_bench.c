@@ -1,4 +1,5 @@
 #include "../src/vm.h"
+#include "../src/memory.h"
 
 #include "ubench.h"
 #include <assert.h>
@@ -35,7 +36,7 @@ UBENCH_EX(Bench, Zoo) {
                        "      zoo.mouse(); \n"
                        "} \n";
 
-    initVM();
+    initVM(stdout, stderr);
     UBENCH_DO_BENCHMARK() { ires = interpret(src); }
     assert(ires == INTERPRET_OK);
     freeVM();

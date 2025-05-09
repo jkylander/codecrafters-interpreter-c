@@ -18,4 +18,13 @@ void markValue(Value value);
 void collectGarbage();
 void freeObjects();
 
+typedef struct {
+    char *buf;
+    size_t size;
+    FILE *fp;
+} FileStream;
+
+void initFileStream(FileStream *fs);
+void freeFileStream(FileStream *fs);
+
 #endif /* MEMORY_H */

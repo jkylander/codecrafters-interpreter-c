@@ -26,7 +26,7 @@ static Obj *allocateObject(size_t size, ObjType type) {
     vm.objects = object;
 
 #ifdef DEBUG_LOG_GC
-    printf("%p allocate %zu for %s\n", (void *) object, size,
+    fprintf(fout, "%p allocate %zu for %s\n", (void *) object, size,
            ObjType_String[type]);
 #endif
 
@@ -100,41 +100,41 @@ ObjUpvalue *newUpvalue(Value *slot) {
     return upvalue;
 }
 
-static void printFunction(ObjFunction *function) {
+static void printFunction(FILE *fout, ObjFunction *function) {
     if (function->name == nullptr) {
-        printf("<script>");
+        fprintf(fout, "<script>");
         return;
     }
-    printf("<fn %s>", function->name->chars);
+    fprintf(fout, "<fn %s>", function->name->chars);
 }
 
-void printObject(Value value) {
+void printObject(FILE *fout, Value value) {
     switch (OBJ_TYPE(value)) {
         case OBJ_BOUND_METHOD:
-            printFunction(AS_BOUND_METHOD(value)->method->function);
+            printFunction(fout, AS_BOUND_METHOD(value)->method->function);
             break;
-        case OBJ_CLASS: printf("%s", AS_CLASS(value)->name->chars); break;
-        case OBJ_CLOSURE: printFunction(AS_CLOSURE(value)->function); break;
-        case OBJ_UPVALUE: printf("upvalue"); break;
-        case OBJ_FUNCTION: printFunction(AS_FUNCTION(value)); break;
+        case OBJ_CLASS: fprintf(fout, "%s", AS_CLASS(value)->name->chars); break;
+        case OBJ_CLOSURE: printFunction(fout, AS_CLOSURE(value)->function); break;
+        case OBJ_UPVALUE: fprintf(fout, "upvalue"); break;
+        case OBJ_FUNCTION: printFunction(fout, AS_FUNCTION(value)); break;
         case OBJ_INSTANCE:
-            printf("%s instance", AS_INSTANCE(value)->class->name->chars);
+            fprintf(fout, "%s instance", AS_INSTANCE(value)->class->name->chars);
             break;
         case OBJ_LIST: {
             ObjList *list = AS_LIST(value);
-            putc('[', stdout);
+            fputc('[', fout);
             if (list->elements.count > 0) {
-                printValueC(list->elements.values[0]);
+                printValueC(fout, list->elements.values[0]);
             }
             for (int i = 1; i < list->elements.count; i++) {
-                printf(", ");
-                printValueC(list->elements.values[i]);
+                fprintf(fout, ", ");
+                printValueC(fout, list->elements.values[i]);
             }
-            putc(']', stdout);
+            fputc(']', fout);
         }
         case OBJ_MAP: {
             ObjMap *map = AS_MAP(value);
-            putc('{', stdout);
+            fputc('{', fout);
             bool first = true;
             for (int i = 0; i < map->table.capacity; ++i) {
                 Entry *entry = &map->table.entries[i];
@@ -144,16 +144,16 @@ void printObject(Value value) {
                 if (first) {
                     first = false;
                 } else {
-                    printf(", ");
+                    fprintf(fout, ", ");
                 }
-                printf("%.*s: ", entry->key->length, entry->key->chars);
-                printValueC(entry->value);
+                fprintf(fout, "%.*s: ", entry->key->length, entry->key->chars);
+                printValueC(fout, entry->value);
             }
-            putc('}', stdout);
+            fputc('}', fout);
             break;
         }
-        case OBJ_NATIVE: printf("<native fn>"); break;
-        case OBJ_STRING: printf("%s", AS_CSTRING(value)); break;
+        case OBJ_NATIVE: fprintf(fout, "<native fn>"); break;
+        case OBJ_STRING: fprintf(fout, "%s", AS_CSTRING(value)); break;
     }
 }
 

@@ -8,7 +8,7 @@ ObjFunction *compile_expression(const char *source);
 void markCompilerRoots();
 
 typedef struct Expr Expr;
-void print_ast(Expr *expr);
+void print_ast(FILE *fout, Expr *expr);
 void free_expr(Expr *expr);
 Expr *parse(const char *source);
 bool hadError();

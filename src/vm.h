@@ -16,6 +16,8 @@ typedef struct {
 } CallFrame;
 
 typedef struct {
+    FILE *fout;
+    FILE *ferr;
     CallFrame frames[FRAMES_MAX];
     int frameCount;
     Value stack[STACK_MAX];
@@ -45,7 +47,7 @@ typedef enum {
 
 extern VM vm;
 
-void initVM();
+void initVM(FILE *fout, FILE *ferr);
 void freeVM();
 InterpretResult interpret(const char *source);
 InterpretResult evaluate(const char *source);

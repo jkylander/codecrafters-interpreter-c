@@ -1,4 +1,5 @@
 #include "compiler.h"
+#include "memory.h"
 #include "scanner.h"
 #include "vm.h"
 #include <stdio.h>
@@ -8,7 +9,7 @@
 char *read_file_contents(const char *filename);
 
 int main(int argc, char *argv[]) {
-    initVM();
+    initVM(stdout, stderr);
     // Disable output buffering
     setbuf(stdout, NULL);
     setbuf(stderr, NULL);
@@ -31,7 +32,7 @@ int main(int argc, char *argv[]) {
         if (hadError()) {
             return 65;
         }
-        print_ast(ast);
+        print_ast(stdout, ast);
         printf("\n");
         free_expr(ast);
         free(source);

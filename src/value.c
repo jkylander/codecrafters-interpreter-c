@@ -46,38 +46,38 @@ Value removeValueArray(ValueArray *array, int pos) {
     return value;
 }
 
-void printValueC(Value value) {
+void printValueC(FILE *fout, Value value) {
     if (IS_LIST(value)) {
-        printf("<list %u>", AS_LIST(value)->elements.count);
+        fprintf(fout, "<list %u>", AS_LIST(value)->elements.count);
     } else if (IS_MAP(value)) {
-        printf("<map>");
+        fprintf(fout, "<map>");
     } else {
-        printValue(value);
+        printValue(fout, value);
     }
 }
 
-void printValue(Value value) {
+void printValue(FILE *fout, Value value) {
 #ifdef NAN_BOXING
     if (IS_BOOL(value)) {
-        printf(AS_BOOL(value) ? "true" : "false");
+        fprintf(fout, AS_BOOL(value) ? "true" : "false");
     } else if (IS_NIL(value)) {
-        printf("nil");
+        fprintf(fout, "nil");
     } else if (IS_NUMBER(value)) {
-        printf("%g", AS_NUMBER(value));
+        fprintf(fout, "%g", AS_NUMBER(value));
     } else if (IS_OBJ(value)) {
-        printObject(value);
+        printObject(fout, value);
     }
 
 #else
     switch (value.type) {
-        case VAL_BOOL: printf(AS_BOOL(value) ? "true" : "false"); break;
-        case VAL_NIL: printf("nil"); break;
+        case VAL_BOOL: fprintf(fout, AS_BOOL(value) ? "true" : "false"); break;
+        case VAL_NIL: fprintf(fout, "nil"); break;
         case VAL_NUMBER: {
             double num = AS_NUMBER(value);
             if (num == (int) num) {
-                printf("%d", (int) num);
+                fprintf(fout, "%d", (int) num);
             } else {
-                printf("%g", num);
+                fprintf(fout, "%g", num);
             }
             break;
         }
