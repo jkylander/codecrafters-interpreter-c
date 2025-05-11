@@ -5,7 +5,7 @@ CFLAGS_COMMON += -Wno-unused-command-line-argument
 DEPFLAGS = -MMD -MP
 EXECUTABLE = interpreter
 CLI_ARGS = run
-INPUT_FILE = tests/map.lox
+INPUT_FILE = tests/run.lox
 
 # Build modes
 ifeq ($(BUILD),)
