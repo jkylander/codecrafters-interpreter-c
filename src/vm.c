@@ -349,7 +349,7 @@ static bool callValue(Value callee, int argCount) {
                 if (tableGet(&class->methods, vm.initString, &initializer)) {
                     return callValue(initializer, argCount);
                 } else if (argCount != 0) {
-                    runtimeError("Expected 0 arguments but got %d", argCount);
+                    runtimeError("Expected 0 arguments but got %d.", argCount);
                     return false;
                 }
                 return true;
