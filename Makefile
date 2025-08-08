@@ -4,8 +4,8 @@ CFLAGS_COMMON = -Wall -Werror -Wextra -Wsign-compare -std=c23
 CFLAGS_COMMON += -Wno-unused-command-line-argument
 DEPFLAGS = -MMD -MP
 EXECUTABLE = interpreter
-CLI_ARGS = run
-INPUT_FILE = tests/run.lox
+CLI_ARGS = 
+INPUT_FILE = 
 
 # Build modes
 ifeq ($(BUILD),)

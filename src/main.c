@@ -1,4 +1,5 @@
 #include "compiler.h"
+#include "bestline.h"
 #include "memory.h"
 #include "scanner.h"
 #include "vm.h"
@@ -15,8 +16,13 @@ int main(int argc, char *argv[]) {
     setbuf(stderr, NULL);
 
     if (argc < 3) {
-        fprintf(stderr, "Usage: ./your_program tokenize <filename>\n");
-        return 1;
+        char *line;
+        while ((line = bestlineWithHistory("> ", "lox"))) {
+            interpret(line);
+            free(line);
+        }
+        freeVM();
+        return 0;
     }
 
     const char *command = argv[1];
